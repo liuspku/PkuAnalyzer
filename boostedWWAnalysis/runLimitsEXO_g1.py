@@ -589,10 +589,7 @@ if __name__ == '__main__':
     moreCombineOpts = "";
 
     ### Set the working directory
-        
-    if (options.computeLimits or options.plotLimits) and options.limitMode == 2 : os.chdir("cards_em_EXO_allCat_v2_ExpTail_g1_rereco_c0p5_new");
-    elif (options.computeLimits or options.plotLimits) : os.chdir("cards_em_EXO_allCat_v2_ExpTail_g1_rereco_c0p5_new");
-
+    os.chdir("cards_allCats");
     
     ### put in functionality to test just one mass point or just one cprime
 
