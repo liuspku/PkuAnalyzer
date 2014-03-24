@@ -1,0 +1,46 @@
+How to compile
+https://twiki.cern.ch/twiki/bin/viewauth/CMS/HiggsWWTolnujBoostedWorkingArea
+
+NOTICE: For some unknown reason, you have to compile them one by one
+cd  PDFs
+root
+root [0] gSystem->AddIncludePath("-I$ROOFITSYS/include")
+root [1] .L PdfDiagonalizer.cc++
+root [2] .q
+
+root
+root [0] gSystem->AddIncludePath("-I$ROOFITSYS/include")
+root [1] .L RooRelBWRunningWidth.cxx++
+root [2] .q
+
+root
+root [0] gSystem->AddIncludePath("-I$ROOFITSYS/include")
+root [1] .L HWWLVJRooPdfs.cxx++
+root [2] .q
+
+root
+root [0] gSystem->AddIncludePath("-I$ROOFITSYS/include")
+root [1] .L Util.cxx++
+root [2] .q
+
+cd ../
+
+
+----------------command ---------
+
+root -l
+gSystem->AddIncludePath("-I$ROOFITSYS/include")
+.L PdfDiagonalizer.cc++
+.q
+root -l
+gSystem->AddIncludePath("-I$ROOFITSYS/include")
+.L RooRelBWRunningWidth.cxx++
+.q
+root -l
+gSystem->AddIncludePath("-I$ROOFITSYS/include")
+.L HWWLVJRooPdfs.cxx++
+.q
+root -l
+gSystem->AddIncludePath("-I$ROOFITSYS/include")
+.L Util.cxx++
+.q
