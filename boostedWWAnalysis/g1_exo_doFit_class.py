@@ -89,7 +89,7 @@ class doFit_wj_and_wlvj:
             self.BinWidth_mlvj=100.;
             
         #narrow the BinWidth_mj and BinWidth_mlvj by a factor of 5. Because Higgs-Combination-Tools will generate a binned sample, so need the bin width narrow. So, as a easy selution, we will increase the bin-width by a factor of 5 when ploting m_j m_WW
-        self.narrow_factor=1.;
+        self.narrow_factor=5.;
 
         ## correct the binning of mj 
         self.BinWidth_mj=self.BinWidth_mj/self.narrow_factor;
