@@ -109,9 +109,11 @@ class doFit_wj_and_wlvj:
         self.sig_list=[];
         self.bkg_list=[];
         for iter in range(3, 3+self.nsig):
-            self.sig_list.append( (self.sig_bkg_files[iter][0], self.sig_bkg_files[iter][2]) );
+            self.sig_list.append( self.sig_bkg_files[iter] );
+            #self.sig_list.append( (self.sig_bkg_files[iter][0], self.sig_bkg_files[iter][2]) );
         for iter in range( 3+self.nsig, 3+self.nsig+self.nbkg):
-            self.bkg_list.append( (self.sig_bkg_files[iter][0], self.sig_bkg_files[iter][2]) );
+            self.bkg_list.append( self.sig_bkg_files[iter] );
+            #self.bkg_list.append( (self.sig_bkg_files[iter][0], self.sig_bkg_files[iter][2]) );
         print self.sig_list;
         print self.bkg_list;
 
@@ -153,13 +155,13 @@ class doFit_wj_and_wlvj:
         print "############### fit_Signals #####################"
         for iter_sig in range(self.nsig):
             print self.sig_list[iter_sig];
-            self.fit_SingleChannel(self.sig_list[iter_sig][1], "_%s"%self.sig_list[iter_sig][0]);
+            self.fit_SingleChannel(self.sig_list[iter_sig][2], "_%s"%self.sig_list[iter_sig][0]);
 
     def fit_Backgrounds(self):
         print "############### fit_Backgrounds #####################"
         for iter_bkg in range(self.nbkg):
             print self.bkg_list[iter_bkg]; 
-            self.fit_SingleChannel(self.bkg_list[iter_bkg][1], "_%s"%self.bkg_list[iter_bkg][0]);
+            self.fit_SingleChannel(self.bkg_list[iter_bkg][2], "_%s"%self.bkg_list[iter_bkg][0]);
 
  
     #### Define the steps to fit signal distribution in the mj and mlvj spectra
@@ -169,10 +171,9 @@ class doFit_wj_and_wlvj:
         self.get_mj_and_mlvj_dataset(file, label, self.analyzer_config["limit_variable"], self.analyzer_config["obs0_variable"])
 
 
-        self.fit_mj_single_MC(self.file_SingleT_mc,"_SingleT","ExpGaus");
-
-        self.fit_mlvj_model_single_MC(self.file_SingleT_mc,"_SingleT","_lowersideband","ErfExp_v1", 0, 0, 1);
-        self.fit_mlvj_model_single_MC(self.file_SingleT_mc,"_SingleT","_signalregion","ErfExp_v1", 1, 0, 1);
+        #self.fit_mj_single_MC(self.file_SingleT_mc,"_SingleT","ExpGaus");
+        #self.fit_mlvj_model_single_MC(self.file_SingleT_mc,"_SingleT","_lowersideband","ErfExp_v1", 0, 0, 1);
+        #self.fit_mlvj_model_single_MC(self.file_SingleT_mc,"_SingleT","_signalregion","ErfExp_v1", 1, 0, 1);
 
 
         #model_narrow="DoubleCB_v1",model_width="BWDoubleCB"  
@@ -185,6 +186,95 @@ class doFit_wj_and_wlvj:
         #else:
         #    self.fit_mlvj_model_single_MC(self.file_signal,"_%s"%(self.prime_signal_sample),"_signalregion",model_narrow, 0, 0, 0, 0);
         print "________________________________________________________________________"
+
+    ### Define the Extended Pdf for and mlvj fit giving: label, fit model name, list constraint, range to be fitted and do the decorrelation
+    def fit_mlvj_model_single_MC(self, label, in_range, mlvj_model, deco=0, show_constant_parameter=0, logy=0, ismc=0):
+
+        print "############### Fit mlvj single MC sample ",label,"  ",mlvj_model,"  ",in_range," ##################"
+        ## import variable and dataset
+        rrv_mass_lvj = self.workspace4fit_.var("rrv_mass_lvj")
+        rdataset = self.workspace4fit_.data("rdataset4fit"+label+in_range+"_"+self.categoryLabel+"_mlvj");
+        constrainslist =[];
+
+        ## make the extended pdf model
+        model = self.make_Model(label+in_range,mlvj_model,"_mlvj",constrainslist,ismc);
+
+        ## make the fit
+        model.fitTo( rdataset, RooFit.Save(1), RooFit.SumW2Error(kTRUE) ,RooFit.Extended(kTRUE) );
+        rfresult = model.fitTo( rdataset, RooFit.Save(1), RooFit.SumW2Error(kTRUE) ,RooFit.Extended(kTRUE), RooFit.Minimizer("Minuit2") );
+        rfresult.Print();
+
+        ## set the name of the result of the fit and put it in the workspace   
+        rfresult.SetName("rfresult"+label+in_range+"_"+self.categoryLabel+"_mlvj")
+        getattr(self.workspace4fit_,"import")(rfresult)
+
+        ## plot the result
+        mplot = rrv_mass_lvj.frame(RooFit.Title("M_{lvj"+in_range+"} fitted by "+mlvj_model), RooFit.Bins(int(rrv_mass_lvj.getBins()/self.BinWidth_narrow_factor)));
+        rdataset.plotOn( mplot , RooFit.MarkerSize(1.5), RooFit.DataError(RooAbsData.SumW2), RooFit.XErrorSize(0) );
+        ## plot the error band but don't store the canvas (only plotted without -b option
+        draw_error_band_extendPdf(rdataset, model, rfresult,mplot,2,"L")
+        rdataset.plotOn( mplot , RooFit.MarkerSize(1.5), RooFit.DataError(RooAbsData.SumW2), RooFit.XErrorSize(0) );
+        model.plotOn( mplot )#, RooFit.VLines()); in order to have the right pull 
+
+        ## get the pull 
+        mplot_pull      = self.get_pull(rrv_mass_lvj,mplot);
+        parameters_list = model.getParameters(rdataset);
+        mplot.GetYaxis().SetRangeUser(1e-2,mplot.GetMaximum()*1.2);
+
+        self.draw_canvas_with_pull( mplot, mplot_pull,parameters_list,"plots_%s_%s_%s_%s/m_lvj_fitting/"%(self.additioninformation, self.categoryLabel,self.PS_model,self.wtagger_label), in_file_name,"m_lvj"+in_range+mlvj_model, show_constant_parameter, logy);
+
+
+        ## if the shape parameters has to be decorrelated
+        if deco :
+            print "################### Decorrelated mlvj single mc shape ################"
+            model_pdf = self.workspace4fit_.pdf("model_pdf%s%s_%s_mlvj"%(label,in_range,self.categoryLabel)); ## take the pdf from the workspace
+            model_pdf.fitTo( rdataset, RooFit.Save(1), RooFit.SumW2Error(kTRUE) );
+            rfresult_pdf = model_pdf.fitTo( rdataset, RooFit.Save(1), RooFit.SumW2Error(kTRUE), RooFit.Minimizer("Minuit2"));
+            rfresult_pdf.Print();
+
+            ## temp workspace for the pdf diagonalizer
+            wsfit_tmp = RooWorkspace("wsfit_tmp"+label+in_range+"_"+self.categoryLabel+"_mlvj");
+            Deco      = PdfDiagonalizer("Deco"+label+in_range+"_"+self.categoryLabel+"_"+self.wtagger_label+"_mlvj",wsfit_tmp,rfresult_pdf); ## in order to have a good name 
+            print "##################### diagonalize ";
+            model_pdf_deco = Deco.diagonalize(model_pdf); ## diagonalize            
+            print "##################### workspace for decorrelation ";
+            wsfit_tmp.Print("v");
+            print "##################### original  parameters ";
+            model_pdf.getParameters(rdataset).Print("v");
+            print "##################### original  decorrelated parameters ";
+            model_pdf_deco.getParameters(rdataset).Print("v");
+            print "##################### original  pdf ";
+            model_pdf.Print();
+            print "##################### decorrelated pdf ";
+            model_pdf_deco.Print();
+
+            ## import in the workspace and print the diagonalizerd pdf
+            getattr(self.workspace4fit_,"import")(model_pdf_deco);
+
+            ### define a frame for TTbar or other plots
+            mplot_deco = rrv_mass_lvj.frame( RooFit.Bins(int(rrv_mass_lvj.getBins()/self.BinWidth_narrow_factor)));
+
+            rdataset.plotOn(mplot_deco, RooFit.Name("Data"), RooFit.MarkerSize(1.5), RooFit.DataError(RooAbsData.SumW2), RooFit.XErrorSize(0) );
+            model_pdf_deco.plotOn(mplot_deco,RooFit.Name(label),RooFit.LineColor(kBlack));
+
+            mplot_deco.GetYaxis().SetRangeUser(1e-2,mplot_deco.GetMaximum()*1.2);
+
+            rrv_number_dataset=RooRealVar("rrv_number_dataset","rrv_number_dataset",rdataset.sumEntries());
+            rrv_number_dataset.setError(0.)
+            draw_error_band(rdataset, model_pdf,rrv_number_dataset,rfresult_pdf,mplot_deco,self.color_palet["Uncertainty"],"F"); ## don't store the number in the workspace
+
+            self.plot_legend = self.legend4Plot(mplot_deco,0); ## add the plot_legend                
+            mplot_deco.addObject(self.plot_legend);
+
+            self.draw_canvas( mplot_deco, "plots_%s_%s_%s_%s/other/"%(self.additioninformation, self.categoryLabel,self.PS_model, self.wtagger_label), "m_lvj"+label+in_range+in_range+mlvj_model+"_deco",0,logy)
+
+        ### Number of the event in the dataset and lumi scale factor --> set the proper number for bkg extraction or for signal region
+        self.workspace4fit_.var("rrv_number"+label+in_range+"_"+self.categoryLabel+"_mlvj").Print();
+        self.workspace4fit_.var("rrv_scale_to_lumi"+label+"_"+self.categoryLabel).Print()
+        self.workspace4fit_.var("rrv_number"+label+in_range+"_"+self.categoryLabel+"_mlvj").setVal( self.workspace4fit_.var("rrv_number"+label+in_range+"_"+self.categoryLabel+"_mlvj").getVal()*self.workspace4fit_.var("rrv_scale_to_lumi"+label+"_"+self.categoryLabel).getVal() )
+        self.workspace4fit_.var("rrv_number"+label+in_range+"_"+self.categoryLabel+"_mlvj").setError(self.workspace4fit_.var("rrv_number"+label+in_range+"_"+self.categoryLabel+"_mlvj").getError()*self.workspace4fit_.var("rrv_scale_to_lumi"+label+"_"+self.categoryLabel).getVal() )
+
+        self.workspace4fit_.var("rrv_number"+label+in_range+"_"+self.categoryLabel+"_mlvj").Print();
 
 
     #### run selection on data to build the datasets 
