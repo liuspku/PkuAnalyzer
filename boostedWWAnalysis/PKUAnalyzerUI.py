@@ -58,7 +58,7 @@ def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample
     #2ed line is for data,3 to 3+nsig-1 lines for sig channel;
     #3+nsig to 3+nsig+nbkg-1 for bkg channels.
     #First signal as prime signal. 
-    #Name, color number, file.
+    #Signal and Background Line: Name, color number, file, fit_or_not, (if fit) fit shape name, parameter0 initial value, parameter1 initial value, parameter2 initial value, ...;
     '''sig_bkg_files=(
             2, # nsig: number of signal channels
             4, # nbkg: number of background channels
@@ -73,13 +73,13 @@ def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample
     sig_bkg_files=(
             2, # nsig: number of signal channels
             4, # nbkg: number of background channels
-            ("data", 1, file_Directory+"treeEDBR_data_xww.root"),#data file
-            ("G900", 1, file_Directory+"treeEDBR_BulkG_WW_inclusive_c0p2_M900_xww.root"),#sig
-            ("G1000", 1, file_Directory+"treeEDBR_BulkG_WW_inclusive_c0p2_M1000_xww.root"),#sig
-            ("WJets", 2, file_Directory+"treeEDBR_WJetsPt100_xww.root"), #bkg
-            ("TTbar", 210, file_Directory+"treeEDBR_TTBARpowheg_xww.root"), #bkg
-            ("SingleT", 7, file_Directory+"treeEDBR_SingleTop_xww.root"), #bkg
-            ("VV", 4, file_Directory+"treeEDBR_VV_xww.root") #bkg
+            ("data", 1, file_Directory+"treeEDBR_data_xww.root", 0),#data file
+            ("G900", 1, file_Directory+"treeEDBR_BulkG_WW_inclusive_c0p2_M900_xww.root", 0),#sig
+            ("G1000", 1, file_Directory+"treeEDBR_BulkG_WW_inclusive_c0p2_M1000_xww.root", 0),#sig
+            ("WJets", 2, file_Directory+"treeEDBR_WJetsPt100_xww.root", 0), #bkg
+            ("TTbar", 210, file_Directory+"treeEDBR_TTBARpowheg_xww.root", 0), #bkg
+            ("SingleT", 7, file_Directory+"treeEDBR_SingleTop_xww.root", 0), #bkg
+            ("VV", 4, file_Directory+"treeEDBR_VV_xww.root", 0) #bkg
             );
     #category: mu/el, HighPurity/LowPurity
     category_ID_label={
