@@ -150,7 +150,7 @@ class doFit_wj_and_wlvj:
         self.get_data();
         self.fit_Signals()
         self.fit_Backgrounds()
-        self.prepare_limit("SimplyMethod",1,0,0)
+        self.prepare_limit("SimplyMethod")
         self.read_workspace(1)
  
 
@@ -493,7 +493,7 @@ class doFit_wj_and_wlvj:
         ### Taket the workspace for limits  
         file = TFile(self.file_rlt_root) ;
         workspace = file.Get("workspace4limit_") ;
-        workspace.Print()
+        workspace.Print("v");
 
         ### iterate on the workspace element parameters
         print "----------- Parameter Workspace -------------";
@@ -506,7 +506,7 @@ class doFit_wj_and_wlvj:
             param=par.Next()
         print "---------------------------------------------";
 
-        workspace.data("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label)).Print()
+        workspace.data("data_obs_%s"%(self.categoryLabel)).Print()
 
         print "----------- Pdf in the Workspace -------------";
         pdfs_workspace = workspace.allPdfs();
@@ -519,16 +519,16 @@ class doFit_wj_and_wlvj:
         print "----------------------------------------------";
 
         rrv_x = workspace.var("rrv_mass_lvj")
-        data_obs = workspace.data("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label));
+        data_obs = workspace.data("data_obs_%s"%(self.categoryLabel));
         if TString(self.prime_signal_sample).Contains("BulkG_WW"):
-            model_pdf_signal = workspace.pdf("BulkWW_%s_%s"%(self.categoryLabel,self.wtagger_label));
+            model_pdf_signal = workspace.pdf("BulkWW_%s"%(self.categoryLabel));
         else:
-            model_pdf_signal = workspace.pdf("%s_%s_%s"%(self.prime_signal_sample,self.categoryLabel,self.wtagger_label));
+            model_pdf_signal = workspace.pdf("%s_%s"%(self.prime_signal_sample,self.categoryLabel));
 
-        model_pdf_WJets  = workspace.pdf("WJets_%s_%s"%(self.categoryLabel,self.wtagger_label));
-        model_pdf_VV     = workspace.pdf("VV_%s_%s"%(self.categoryLabel,self.wtagger_label));
-        model_pdf_TTbar  = workspace.pdf("TTbar_%s_%s"%(self.categoryLabel,self.wtagger_label));
-        model_pdf_SingleT   = workspace.pdf("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label));
+        model_pdf_WJets  = workspace.pdf("WJets_%s"%(self.categoryLabel));
+        model_pdf_VV     = workspace.pdf("VV_%s"%(self.categoryLabel));
+        model_pdf_TTbar  = workspace.pdf("TTbar_%s"%(self.categoryLabel));
+        model_pdf_SingleT   = workspace.pdf("SingleT_%s"%(self.categoryLabel));
 
         model_pdf_signal.Print();
         model_pdf_WJets.Print();
@@ -578,35 +578,37 @@ class doFit_wj_and_wlvj:
         mplot = rrv_x.frame(RooFit.Title("check_workspace"), RooFit.Bins(int(rrv_x.getBins()/self.BinWidth_narrow_factor)));
         data_obs.plotOn(mplot , RooFit.Name("data_invisible"), RooFit.MarkerSize(1.5), RooFit.DataError(RooAbsData.Poisson), RooFit.XErrorSize(0), RooFit.MarkerColor(0), RooFit.LineColor(0));
 
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("WJets"), RooFit.Components("WJets_%s_%s,VV_%s_%s,TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["WJets"]), RooFit.LineColor(kBlack), RooFit.VLines());
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("WJets"), 
+                RooFit.Components("WJets_%s,VV_%s,TTbar_%s,SingleT_%s"%(self.categoryLabel,self.categoryLabel,self.categoryLabel,self.categoryLabel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["WJets"]), RooFit.LineColor(kBlack), RooFit.VLines());
 
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("VV"), RooFit.Components("VV_%s_%s,TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["VV"]), RooFit.LineColor(kBlack), RooFit.VLines());
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("VV"), RooFit.Components("VV_%s,TTbar_%s,SingleT_%s"%(self.categoryLabel,self.categoryLabel,self.categoryLabel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["VV"]), RooFit.LineColor(kBlack), RooFit.VLines());
 
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("TTbar"), RooFit.Components("TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["TTbar"]), RooFit.LineColor(kBlack), RooFit.VLines());
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("TTbar"), RooFit.Components("TTbar_%s,SingleT_%s"%(self.categoryLabel,self.categoryLabel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["TTbar"]), RooFit.LineColor(kBlack), RooFit.VLines());
 
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("SingleT"), RooFit.Components("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["SingleT"]), RooFit.LineColor(kBlack), RooFit.VLines());
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("SingleT"), RooFit.Components("SingleT_%s"%(self.categoryLabel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["SingleT"]), RooFit.LineColor(kBlack), RooFit.VLines());
 
         #solid line
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("WJets_line_invisible"), RooFit.Components("WJets_%s_%s,VV_%s_%s,TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("WJets_line_invisible"), RooFit.Components("WJets_%s,VV_%s,TTbar_%s,SingleT_%s"%(self.categoryLabel,self.categoryLabel,self.categoryLabel,self.categoryLabel)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
 
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("VV_line_invisible"), RooFit.Components("VV_%s_%s,TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("VV_line_invisible"), RooFit.Components("VV_%s,TTbar_%s,SingleT_%s"%(self.categoryLabel,self.categoryLabel,self.categoryLabel)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
 
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("TTbar_line_invisible"), RooFit.Components("TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("TTbar_line_invisible"), RooFit.Components("TTbar_%s,SingleT_%s"%(self.categoryLabel,self.categoryLabel)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
 
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("SingleT_line_invisible"), RooFit.Components("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("SingleT_line_invisible"), RooFit.Components("SingleT_%s"%(self.categoryLabel)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
 
         ### signal scale to be visible in the plots
-        label_tstring = TString(self.prime_signal_sample);
-        if label_tstring.Contains("600") and (not label_tstring.Contains("1600")):
-            signal_scale=20*self.xs_rescale;
-        elif label_tstring.Contains("700") and (not label_tstring.Contains("1700")):
-            signal_scale=20*self.xs_rescale;
-        elif label_tstring.Contains("800") and (not label_tstring.Contains("1800")):
-            signal_scale=20*self.xs_rescale;
-        else:
-            signal_scale=25*self.xs_rescale;
+        #label_tstring = TString(self.prime_signal_sample);
+        #if label_tstring.Contains("600") and (not label_tstring.Contains("1600")):
+        #    signal_scale=20*self.xs_rescale;
+        #elif label_tstring.Contains("700") and (not label_tstring.Contains("1700")):
+        #    signal_scale=20*self.xs_rescale;
+        #elif label_tstring.Contains("800") and (not label_tstring.Contains("1800")):
+        #    signal_scale=20*self.xs_rescale;
+        #else:
+        #    signal_scale=25*self.xs_rescale;
+        signal_scale=25;
 
-        model_pdf_signal.plotOn(mplot,RooFit.Normalization(scale_number_signal*signal_scale),RooFit.Name("%s #times %s"%(self.prime_signal_sample, signal_scale)),RooFit.DrawOption("L"), RooFit.LineColor(self.color_palet["Signal"]), RooFit.LineStyle(2), RooFit.VLines());
+        model_pdf_signal.plotOn(mplot,RooFit.Normalization(scale_number_signal*signal_scale),RooFit.Name("%s #times %s"%(self.prime_signal_sample, signal_scale)),RooFit.DrawOption("L"), RooFit.LineColor(self.color_palet[self.sig_list[0][0]]), RooFit.LineStyle(2), RooFit.VLines());
 
         #### plot the observed data using poissonian error bar
         self.getData_PoissonInterval(data_obs,mplot);
@@ -619,15 +621,15 @@ class doFit_wj_and_wlvj:
         draw_error_band(model_Total_background_MC, rrv_x.GetName(), rrv_number_Total_background_MC,self.FloatingParams,workspace ,mplot,self.color_palet["Uncertainty"],"F");
 
         mplot.Print();
-        self.plot_legend = self.legend4Plot(mplot,0,1,-0.01,-0.05,0.11,0.);
-        self.plot_legend.SetTextSize(0.036);
-        mplot.addObject(self.plot_legend);
+        #self.plot_legend = self.legend4Plot(mplot,0,1,-0.01,-0.05,0.11,0.);
+        #self.plot_legend.SetTextSize(0.036);
+        #mplot.addObject(self.plot_legend);
 
         mplot.GetYaxis().SetRangeUser(1e-2,mplot.GetMaximum()*1.2);
 
 
         parameters_list = RooArgList();
-        self.draw_canvas_with_pull( mplot, mplot_pull,parameters_list,"plots_%s_%s_%s_%s/m_lvj_fitting/"%(self.additioninformation, self.categoryLabel,self.PS_model,self.wtagger_label),"check_workspace_for_limit","",0,1);
+        self.draw_canvas_with_pull( mplot, mplot_pull,parameters_list,"plots_%s_%s/limit_variable/"%(self.additioninformation, self.categoryLabel),"check_workspace_for_limit","",0,1);
 
         if workspace.var("rrv_num_floatparameter_in_last_fitting"):
             self.nPar_float_in_fitTo = int(workspace.var("rrv_num_floatparameter_in_last_fitting").getVal());
@@ -637,6 +639,29 @@ class doFit_wj_and_wlvj:
         ndof  = nBinX-self.nPar_float_in_fitTo;
         print "nPar=%s, chiSquare=%s/%s"%(self.nPar_float_in_fitTo, mplot.chiSquare( self.nPar_float_in_fitTo )*ndof, ndof );
 
+
+
+    def getData_PoissonInterval(self,data_obs,mplot):
+        rrv_x = self.workspace4fit_.var("rrv_mass_lvj");
+        datahist   = data_obs.binnedClone(data_obs.GetName()+"_binnedClone",data_obs.GetName()+"_binnedClone");
+        data_histo = datahist.createHistogram("histo_data",rrv_x) ;
+        data_histo.SetName("data");
+        data_plot  = RooHist(data_histo);
+        data_plot.SetMarkerStyle(20);
+        data_plot.SetMarkerSize(1.5);
+
+        alpha = 1 - 0.6827;
+        for iPoint  in range(data_plot.GetN()):
+            N = data_plot.GetY()[iPoint];
+            if N==0 : L = 0;
+            else : L = (ROOT.Math.gamma_quantile(alpha/2,N,1.));
+            U =  ROOT.Math.gamma_quantile_c(alpha/2,N+1,1);
+            data_plot.SetPointEYlow(iPoint, N-L);
+            data_plot.SetPointEYhigh(iPoint,U-N);
+            data_plot.SetPointEXlow(iPoint,0);        
+            data_plot.SetPointEXhigh(iPoint,0);        
+
+        mplot.addPlotable(data_plot,"PE");
 
 
     ### in order to get the pull
@@ -696,28 +721,22 @@ class doFit_wj_and_wlvj:
 
 
     ##### Prepare the workspace for the limit and to store info to be printed in the datacard
-    def prepare_limit(self,mode, isTTbarFloating=0, isVVFloating=0, isSingleTFloating=0):
-        print "####################### prepare_limit for %s method ####################"%(mode);
+    #def prepare_limit(self,mode, isTTbarFloating=0, isVVFloating=0, isSingleTFloating=0):
+    def prepare_limit(self,analysis_mode):
+        print "####################### prepare_limit for %s method ####################"%(analysis_mode);
+        self.workspace4fit_.Print("v");
 
         getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_mass_lvj"));
 
-        ### whole number of events from the considered signal sample, WJets, VV, TTbar, SingleT -> couting
-        #if TString(self.prime_signal_sample).Contains("BulkG_WW"):
-        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone("rate_BulkWW_for_counting"))
-        #else:
-        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone("rate_%s_for_counting"%(self.prime_signal_sample)))
-
+        #### whole number of events from the considered signal sample, WJets, VV, TTbar, SingleT -> couting
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone("rate_%s_for_counting"%(self.prime_signal_sample)))
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_WJets0_%s_mlvj"%(self.categoryLabel)).clone("rate_WJets_for_counting"))
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_VV_%s_mlvj"%(self.categoryLabel)).clone("rate_VV_for_counting"))
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_TTbar_%s_mlvj"%(self.categoryLabel)).clone("rate_TTbar_for_counting"))
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_SingleT_%s_mlvj"%(self.categoryLabel)).clone("rate_SingleT_for_counting"))
 
-        #### number of signal, Wjets, VV, TTbar and SingleT --> unbin
-        #if TString(self.prime_signal_sample).Contains("BulkG_WW"):
-        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_%s_signalregion_%s_mlvj"%(self.prime_signal_sample, self.categoryLabel)).clone("rate_BulkWW_for_unbin"));
-        #else:
-        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_%s_signalregion_%s_mlvj"%(self.prime_signal_sample, self.categoryLabel)).clone("rate_%s_for_unbin"%(self.prime_signal_sample)));
-
+        ##### number of signal, Wjets, VV, TTbar and SingleT --> unbin
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_%s_signalregion_%s_mlvj"%(self.prime_signal_sample, self.categoryLabel)).clone("rate_%s_for_unbin"%(self.prime_signal_sample)));
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_WJets0_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_WJets_for_unbin"));
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_VV_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_VV_for_unbin"));
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_TTbar_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_TTbar_for_unbin"));
@@ -729,9 +748,18 @@ class doFit_wj_and_wlvj:
         #self.workspace4limit_.var("rate_TTbar_for_unbin").setError(self.workspace4limit_.var("rate_TTbar_for_unbin").getVal()*TMath.Sqrt( self.lumi_uncertainty*self.lumi_uncertainty + self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal()*self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal() ))
 
         #### Get the dataset for data into the signal region
-        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.data("rdataset_data_signalregion_%s_mlvj"%(self.categoryLabel)).Clone("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label)))
+        getattr(self.workspace4limit_,"import")(self.workspace4fit_.data("rdataset_data_signalregion_%s_mlvj"%(self.categoryLabel)).Clone("data_obs_%s"%(self.categoryLabel)))
+
+        for iter_sig in range(self.nsig):
+            getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_%s_signalregion_%s_mlvj"%(self.sig_list[iter_sig][0], self.categoryLabel)).clone("rate_%s_for_unbin"%(self.sig_list[iter_sig][0])));
+            getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_%s_signalregion_%s_mlvj"%(self.sig_list[iter_sig][0], self.categoryLabel)).clone("%s_%s"%(self.sig_list[iter_sig][0], self.categoryLabel)));
+
+        for iter_bkg in range(self.nbkg):
+            getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_%s_signalregion_%s_mlvj"%(self.bkg_list[iter_bkg][0], self.categoryLabel)).clone("rate_%s_for_unbin"%(self.bkg_list[iter_bkg][0])));
+            getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_%s_signalregion_%s_mlvj"%(self.bkg_list[iter_bkg][0], self.categoryLabel)).clone("%s_%s"%(self.bkg_list[iter_bkg][0], self.categoryLabel)));
+
         #### Take the corrected pdf from the alpha method for the WJets
-        #if mode=="sideband_correction_method1":
+        #if analysis_mode=="sideband_correction_method1":
         #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_WJets0_signalregion_%s_after_correct_mlvj"%(self.categoryLabel)).clone("WJets_%s_%s"%(self.categoryLabel, self.wtagger_label)));
 
         #if isTTbarFloating:
@@ -776,9 +804,9 @@ class doFit_wj_and_wlvj:
         #    param.Print();
         #    param=par.Next()
 
-        #params_list = [];
+        params_list = [];
         #### main modality for the alpha function method
-        #if mode=="sideband_correction_method1":
+        #if analysis_mode=="sideband_correction_method1":
 
         #    if self.MODEL_4_mlvj=="ErfExp_v1" or self.MODEL_4_mlvj=="ErfPow_v1" or self.MODEL_4_mlvj=="2Exp" :
         #        ### uncertainty inflation on the Wjets shape from fitting data in lowersideband
@@ -962,11 +990,11 @@ class doFit_wj_and_wlvj:
         #self.rrv_counting_uncertainty_from_shape_uncertainty.setError( Calc_error("WJets_%s_%s"%(self.categoryLabel,self.wtagger_label), "rrv_mass_lvj" ,self.FloatingParams,self.workspace4limit_,"signalregion") );
         #self.rrv_counting_uncertainty_from_shape_uncertainty.Print();
 
-        #print " param list ",params_list ;
+        print " param list ",params_list ;
 
         ### Print the datacard for unbin and couting analysis
-        #self.print_limit_datacard("unbin",params_list);
-        self.print_limit_datacard("counting");
+        self.print_limit_datacard("unbin",params_list);
+        #self.print_limit_datacard("counting");
         ### Save the workspace
         self.save_workspace_to_file();
 
@@ -979,13 +1007,13 @@ class doFit_wj_and_wlvj:
 
 
     #### Method used to print the general format of the datacard for both counting and unbinned analysis
-    def print_limit_datacard(self, mode, params_list=[]):
-        print "############## print_limit_datacard for %s ################"%(mode)
-        if not (mode == "unbin" or mode == "counting"):
-            print "print_limit_datacard use wrong mode: %s"%(mode);raw_input("ENTER");
+    def print_limit_datacard(self, datacard_mode, params_list=[]):
+        print "############## print_limit_datacard for %s ################"%(datacard_mode)
+        if not (datacard_mode == "unbin" or datacard_mode == "counting"):
+            print "print_limit_datacard use wrong mode: %s"%(datacard_mode);raw_input("ENTER");
 
         ### open the datacard    
-        datacard_out = open(getattr(self,"file_datacard_%s"%(mode)),"w");
+        datacard_out = open(getattr(self,"file_datacard_%s"%(datacard_mode)),"w");
 
         ### start to print inside 
         datacard_out.write( "imax 1" )
@@ -993,7 +1021,7 @@ class doFit_wj_and_wlvj:
         datacard_out.write( "\nkmax *" )
         datacard_out.write( "\n--------------- ")
 
-        #if mode == "unbin":
+        #if datacard_mode == "unbin":
         #    fnOnly = ntpath.basename(self.file_rlt_root) ## workspace for limit --> output file for the workspace
         #    if TString(self.prime_signal_sample).Contains("BulkG_WW"):
         #        datacard_out.write("\nshapes BulkWW  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
@@ -1008,9 +1036,9 @@ class doFit_wj_and_wlvj:
         #    datacard_out.write( "\n--------------- ")
 
         #datacard_out.write( "\nbin CMS_%s1J%s "%(self.categoryLabel,self.wtagger_label));    
-        #if mode == "unbin":
+        #if datacard_mode == "unbin":
         #    datacard_out.write( "\nobservation %0.2f "%(self.workspace4limit_.data("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label)).sumEntries()) )
-        #if mode == "counting":
+        #if datacard_mode == "counting":
         #    datacard_out.write( "\nobservation %0.2f "%(self.workspace4limit_.var("observation_for_counting").getVal()) )
 
         #datacard_out.write( "\n------------------------------" );
@@ -1025,13 +1053,13 @@ class doFit_wj_and_wlvj:
         #datacard_out.write( "\nprocess -1 1 2 3 4" );
 
         #### rates for the different process
-        #if mode == "unbin":
+        #if datacard_mode == "unbin":
         #    if TString(self.prime_signal_sample).Contains("BulkG_WW"):                    
         #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f "%(self.workspace4limit_.var("rate_BulkWW_for_unbin").getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_unbin").getVal(), self.workspace4limit_.var("rate_TTbar_for_unbin").getVal(), self.workspace4limit_.var("rate_SingleT_for_unbin").getVal(), self.workspace4limit_.var("rate_VV_for_unbin").getVal() ) )
         #    else:
         #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f "%(self.workspace4limit_.var("rate_%s_for_unbin"%(self.prime_signal_sample)).getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_unbin").getVal(), self.workspace4limit_.var("rate_TTbar_for_unbin").getVal(), self.workspace4limit_.var("rate_SingleT_for_unbin").getVal(), self.workspace4limit_.var("rate_VV_for_unbin").getVal() ) )
 
-        #if mode == "counting":
+        #if datacard_mode == "counting":
         #    if TString(self.prime_signal_sample).Contains("BulkG_WW"):                    
         #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f"%(self.workspace4limit_.var("rate_BulkWW_for_counting").getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_counting").getVal(), self.workspace4limit_.var("rate_TTbar_for_counting").getVal(), self.workspace4limit_.var("rate_SingleT_for_counting").getVal(), self.workspace4limit_.var("rate_VV_for_counting").getVal() ) )
         #    else : 
@@ -1050,7 +1078,7 @@ class doFit_wj_and_wlvj:
 
         #### WJets Normalization from data fit -> data driven
         #if self.number_WJets_insideband >0:
-        #    datacard_out.write( "\nCMS_WJ_norm gmN %0.3f %0.3f - - -"%(self.number_WJets_insideband, getattr(self, "datadriven_alpha_WJets_%s"%(mode)) ) )
+        #    datacard_out.write( "\nCMS_WJ_norm gmN %0.3f %0.3f - - -"%(self.number_WJets_insideband, getattr(self, "datadriven_alpha_WJets_%s"%(datacard_mode)) ) )
         #else:
         #    datacard_out.write( "\nCMS_WJ_norm_%s_%s lnN - %0.3f - - -"%(self.categoryLabel, self.wtagger_label, 1+ self.workspace4limit_.var("rate_WJets_for_unbin").getError()/self.workspace4limit_.var("rate_WJets_for_unbin").getVal() ) );
 
@@ -1115,14 +1143,14 @@ class doFit_wj_and_wlvj:
 
 
         #### print shapes parameter to be taken int account
-        #if mode == "unbin":
+        #if datacard_mode == "unbin":
         #    for ipar in params_list:
         #        print "Name %s",ipar.GetName();
         #      if TString(ipar.GetName()).Contains("Deco_TTbar_signalregion"):
         #          datacard_out.write( "\n%s param %0.1f %0.1f "%( ipar.GetName(), ipar.getVal(), ipar.getError() ) )
         #      else:
         #          datacard_out.write( "\n%s param %0.1f %0.1f "%( ipar.GetName(), ipar.getVal(), ipar.getError() ) )
-        #if mode == "counting":
+        #if datacard_mode == "counting":
         #    datacard_out.write( "\nShape_%s_%s lnN - - %0.3f - - -"%(self.categoryLabel, self.wtagger_label, 1+self.rrv_counting_uncertainty_from_shape_uncertainty.getError()))
 
  
@@ -3970,29 +3998,6 @@ class doFit_wj_and_wlvj:
         self.workspace4fit_.var("rrv_number%s_signalregion_%s_mlvj"%(label,self.categoryLabel)).setError(self.workspace4fit_.var("rrv_number%s_in_mj_signalregion_from_fitting_%s"%(label,self.categoryLabel)).getError());
 
         self.workspace4fit_.var("rrv_number%s_signalregion_%s_mlvj"%(label,self.categoryLabel)).setConstant(kTRUE);
-
-
-    def getData_PoissonInterval(self,data_obs,mplot):
-        rrv_x = self.workspace4fit_.var("rrv_mass_lvj");
-        datahist   = data_obs.binnedClone(data_obs.GetName()+"_binnedClone",data_obs.GetName()+"_binnedClone");
-        data_histo = datahist.createHistogram("histo_data",rrv_x) ;
-        data_histo.SetName("data");
-        data_plot  = RooHist(data_histo);
-        data_plot.SetMarkerStyle(20);
-        data_plot.SetMarkerSize(1.5);
-
-        alpha = 1 - 0.6827;
-        for iPoint  in range(data_plot.GetN()):
-            N = data_plot.GetY()[iPoint];
-          if N==0 : L = 0;
-          else : L = (ROOT.Math.gamma_quantile(alpha/2,N,1.));
-          U =  ROOT.Math.gamma_quantile_c(alpha/2,N+1,1);
-          data_plot.SetPointEYlow(iPoint, N-L);
-          data_plot.SetPointEYhigh(iPoint,U-N);
-          data_plot.SetPointEXlow(iPoint,0);        
-          data_plot.SetPointEXhigh(iPoint,0);        
-
-        mplot.addPlotable(data_plot,"PE");
 
 
   ### in order to make the plot_legend
