@@ -12,10 +12,11 @@ from optparse import OptionParser
 
 from ROOT import gROOT, TPaveLabel, gStyle, gSystem, TGaxis, TStyle, TLatex, TString, TF1,TFile,TLine, TLegend, TH1D,TH2D,THStack,TChain, TCanvas, TMatrixDSym, TMath, TText, TPad, RooFit, RooArgSet, RooArgList, RooArgSet, RooAbsData, RooAbsPdf, RooAddPdf, RooWorkspace, RooExtendPdf,RooCBShape, RooLandau, RooFFTConvPdf, RooGaussian, RooBifurGauss, RooArgusBG,RooDataSet, RooExponential,RooBreitWigner, RooVoigtian, RooNovosibirsk, RooRealVar,RooFormulaVar, RooDataHist, RooHist,RooCategory, RooChebychev, RooSimultaneous, RooGenericPdf,RooConstVar, RooKeysPdf, RooHistPdf, RooEffProd, RooProdPdf, TIter, kTRUE, kFALSE, kGray, kRed, kDashed, kGreen,kAzure, kOrange, kBlack,kBlue,kYellow,kCyan, kMagenta, kWhite
 
-#ROOT.gSystem.Load(options.inPath+"/PDFs/PdfDiagonalizer_cc.so")
-#ROOT.gSystem.Load(options.inPath+"/PDFs/Util_cxx.so")
-#ROOT.gSystem.Load(options.inPath+"/PDFs/HWWLVJRooPdfs_cxx.so")
-#from ROOT import draw_error_band, draw_error_band_extendPdf, draw_error_band_Decor, draw_error_band_shape_Decor, Calc_error_extendPdf, Calc_error, RooErfExpPdf, RooAlpha, RooAlpha4ErfPowPdf, RooAlpha4ErfPow2Pdf, RooAlpha4ErfPowExpPdf, PdfDiagonalizer, RooPowPdf, RooPow2Pdf, RooErfPowExpPdf, RooErfPowPdf, RooErfPow2Pdf, RooQCDPdf, RooUser1Pdf, RooBWRunPdf, RooAnaExpNPdf, RooExpNPdf, RooAlpha4ExpNPdf, RooExpTailPdf, RooAlpha4ExpTailPdf, Roo2ExpPdf, RooAlpha42ExpPdf
+ROOT.gSystem.Load("PDFs/PdfDiagonalizer_cc.so")
+ROOT.gSystem.Load("PDFs/Util_cxx.so")
+ROOT.gSystem.Load("PDFs/RooRelBWRunningWidth_cxx.so")
+ROOT.gSystem.Load("PDFs/HWWLVJRooPdfs_cxx.so")
+from ROOT import draw_error_band, draw_error_band_extendPdf, draw_error_band_Decor, draw_error_band_shape_Decor, Calc_error_extendPdf, Calc_error, RooErfExpPdf, RooAlpha, RooAlpha4ErfPowPdf, RooAlpha4ErfPow2Pdf, RooAlpha4ErfPowExpPdf, PdfDiagonalizer, RooPowPdf, RooPow2Pdf, RooErfPowExpPdf, RooErfPowPdf, RooErfPow2Pdf, RooQCDPdf, RooUser1Pdf, RooBWRunPdf, RooAnaExpNPdf, RooExpNPdf, RooAlpha4ExpNPdf, RooExpTailPdf, RooAlpha4ExpTailPdf, Roo2ExpPdf, RooAlpha42ExpPdf
 #
 
 ###############################
@@ -149,31 +150,32 @@ class doFit_wj_and_wlvj:
         self.get_data();
         self.fit_Signals()
         self.fit_Backgrounds()
-
+        self.prepare_limit("SimplyMethod",1,0,0)
+        self.read_workspace(1)
+ 
 
     def fit_Signals(self):
         print "############### fit_Signals #####################"
         for iter_sig in range(self.nsig):
             print self.sig_list[iter_sig];
-            self.fit_SingleChannel(self.sig_list[iter_sig][2], "_%s"%self.sig_list[iter_sig][0]);
+            self.fit_SingleChannel(self.sig_list[iter_sig][2], "_%s"%self.sig_list[iter_sig][0], self.sig_list[iter_sig][3]);
 
     def fit_Backgrounds(self):
         print "############### fit_Backgrounds #####################"
         for iter_bkg in range(self.nbkg):
             print self.bkg_list[iter_bkg]; 
-            self.fit_SingleChannel(self.bkg_list[iter_bkg][2], "_%s"%self.bkg_list[iter_bkg][0]);
+            self.fit_SingleChannel(self.bkg_list[iter_bkg][2], "_%s"%self.bkg_list[iter_bkg][0], self.bkg_list[iter_bkg][3]);
 
  
     #### Define the steps to fit signal distribution in the mj and mlvj spectra
-    def fit_SingleChannel(self, file, label):
-        print "############# fit_SingleChannel #################"
+    def fit_SingleChannel(self, file, label, fit_config,):
+        print "############# fit_SingleChannel: %s, %s, %s #################"%(file, label, fit_config)
         ### Build the dataset
         self.get_mj_and_mlvj_dataset(file, label, self.analyzer_config["limit_variable"], self.analyzer_config["obs0_variable"])
 
-
-        #self.fit_mj_single_MC(self.file_SingleT_mc,"_SingleT","ExpGaus");
-        #self.fit_mlvj_model_single_MC(self.file_SingleT_mc,"_SingleT","_lowersideband","ErfExp_v1", 0, 0, 1);
-        #self.fit_mlvj_model_single_MC(self.file_SingleT_mc,"_SingleT","_signalregion","ErfExp_v1", 1, 0, 1);
+        self.fit_limit_variable_SingleChannel(label, "_signalregion", fit_config, 1, 0, 1);
+        self.fit_limit_variable_SingleChannel(label, "_lowersideband", fit_config, 0, 0, 1);
+        #self.fit_obs_variable_SingleChannel(self.file_SingleT_mc,"_SingleT","ExpGaus");
 
 
         #model_narrow="DoubleCB_v1",model_width="BWDoubleCB"  
@@ -182,22 +184,24 @@ class doFit_wj_and_wlvj:
         #        TString(self.file_signal).Contains("BulkG_WW_inclusive_M1500_W450") or TString(self.file_signal).Contains("BulkG_WW_inclusive_M1500_W75") or
         #        TString(self.file_signal).Contains("BulkG_WW_inclusive_M2100_W105") or TString(self.file_signal).Contains("BulkG_WW_inclusive_M2100_W315") or
         #        TString(self.file_signal).Contains("BulkG_WW_inclusive_M2100_W450")):
-        #    self.fit_mlvj_model_single_MC(self.file_signal,"_%s"%(self.prime_signal_sample),"_signalregion",model_width, 0, 0, 0, 0);            
+        #    self.fit_limit_variable_SingleChannel(self.file_signal,"_%s"%(self.prime_signal_sample),"_signalregion",model_width, 0, 0, 0, 0);            
         #else:
-        #    self.fit_mlvj_model_single_MC(self.file_signal,"_%s"%(self.prime_signal_sample),"_signalregion",model_narrow, 0, 0, 0, 0);
-        print "________________________________________________________________________"
+        #    self.fit_limit_variable_SingleChannel(self.file_signal,"_%s"%(self.prime_signal_sample),"_signalregion",model_narrow, 0, 0, 0, 0);
 
     ### Define the Extended Pdf for and mlvj fit giving: label, fit model name, list constraint, range to be fitted and do the decorrelation
-    def fit_mlvj_model_single_MC(self, label, in_range, mlvj_model, deco=0, show_constant_parameter=0, logy=0, ismc=0):
+    #def fit_limit_variable_SingleChannel(self,in_file_name, label, in_range, mlvj_model, deco=0, show_constant_parameter=0, logy=0, ismc=0):
+    def fit_limit_variable_SingleChannel(self, label, in_range, fit_config, show_constant_parameter=0, logy=0, ismc=0):
 
-        print "############### Fit mlvj single MC sample ",label,"  ",mlvj_model,"  ",in_range," ##################"
+        print "############### Fit mlvj single MC sample ",label,"  ",in_range,"  ",fit_config," ##################"
         ## import variable and dataset
         rrv_mass_lvj = self.workspace4fit_.var("rrv_mass_lvj")
         rdataset = self.workspace4fit_.data("rdataset4fit"+label+in_range+"_"+self.categoryLabel+"_mlvj");
         constrainslist =[];
 
         ## make the extended pdf model
-        model = self.make_Model(label+in_range,mlvj_model,"_mlvj",constrainslist,ismc);
+        if fit_config[1]=="Kyes": number_rdata=rdataset.sumEntries();
+        else: number_rdata=500;
+        model = self.make_Model(label+in_range,fit_config,"_mlvj",constrainslist,ismc, number_rdata);
 
         ## make the fit
         model.fitTo( rdataset, RooFit.Save(1), RooFit.SumW2Error(kTRUE) ,RooFit.Extended(kTRUE) );
@@ -209,7 +213,8 @@ class doFit_wj_and_wlvj:
         getattr(self.workspace4fit_,"import")(rfresult)
 
         ## plot the result
-        mplot = rrv_mass_lvj.frame(RooFit.Title("M_{lvj"+in_range+"} fitted by "+mlvj_model), RooFit.Bins(int(rrv_mass_lvj.getBins()/self.BinWidth_narrow_factor)));
+        fitting_model=fit_config[1];
+        mplot = rrv_mass_lvj.frame(RooFit.Title("M_{lvj"+in_range+"} fitted by "+fitting_model), RooFit.Bins(int(rrv_mass_lvj.getBins()/self.BinWidth_narrow_factor)));
         rdataset.plotOn( mplot , RooFit.MarkerSize(1.5), RooFit.DataError(RooAbsData.SumW2), RooFit.XErrorSize(0) );
         ## plot the error band but don't store the canvas (only plotted without -b option
         draw_error_band_extendPdf(rdataset, model, rfresult,mplot,2,"L")
@@ -221,11 +226,12 @@ class doFit_wj_and_wlvj:
         parameters_list = model.getParameters(rdataset);
         mplot.GetYaxis().SetRangeUser(1e-2,mplot.GetMaximum()*1.2);
 
-        self.draw_canvas_with_pull( mplot, mplot_pull,parameters_list,"plots_%s_%s_%s_%s/m_lvj_fitting/"%(self.additioninformation, self.categoryLabel,self.PS_model,self.wtagger_label), in_file_name,"m_lvj"+in_range+mlvj_model, show_constant_parameter, logy);
+        self.draw_canvas_with_pull( mplot, mplot_pull,parameters_list,"plots_%s_%s/limit_variable/"%(self.additioninformation, self.categoryLabel), label, "m_lvj"+in_range+fitting_model, show_constant_parameter, logy);
 
 
         ## if the shape parameters has to be decorrelated
-        if deco :
+        #if deco :
+        if fit_config[0] :
             print "################### Decorrelated mlvj single mc shape ################"
             model_pdf = self.workspace4fit_.pdf("model_pdf%s%s_%s_mlvj"%(label,in_range,self.categoryLabel)); ## take the pdf from the workspace
             model_pdf.fitTo( rdataset, RooFit.Save(1), RooFit.SumW2Error(kTRUE) );
@@ -453,6 +459,833 @@ class doFit_wj_and_wlvj:
         print rrv_number_dataset_signalregion_mlvj.getVal()
         print rrv_number_dataset_AllRange_mlvj.getVal()
 
+    ### Define the Extended Pdf for and mJ fit giving: label, fit model name, list constraint and ismc
+    def make_Model(self, label, fit_config, mass_spectrum="_mj", ConstraintsList=[], ismc_wjet=0, area_init_value=500):
+
+        ##### define an extended pdf from a standard Roofit One
+        print " "
+        print "###############################################"
+        print "## Make model : ",label," ",fit_config,"##";
+        print "###############################################"
+        print " "
+
+        rrv_number = RooRealVar("rrv_number"+label+"_"+self.categoryLabel+mass_spectrum,"rrv_number"+label+"_"+self.categoryLabel+mass_spectrum,area_init_value,0.,1e7);
+        ## call the make RooAbsPdf method
+        model_pdf = self.make_Pdf(label, fit_config,mass_spectrum,ConstraintsList,ismc_wjet)
+        print "######## Model Pdf ########"        
+        model_pdf.Print();
+
+        ## create the extended pdf
+        model = RooExtendPdf("model"+label+"_"+self.categoryLabel+mass_spectrum,"model"+label+"_"+self.categoryLabel+mass_spectrum, model_pdf, rrv_number );
+        print "######## Model Extended Pdf ########"        
+
+        #### put all the parameters ant the shape in the workspace
+        getattr(self.workspace4fit_,"import")(rrv_number)
+        getattr(self.workspace4fit_,"import")(model) 
+        self.workspace4fit_.pdf("model"+label+"_"+self.categoryLabel+mass_spectrum).Print();
+        ## return the total extended pdf
+        return self.workspace4fit_.pdf("model"+label+"_"+self.categoryLabel+mass_spectrum);
+
+
+    #### Read the final workspace and produce the latest plots 
+    def read_workspace(self, logy=0):
+
+        ### Taket the workspace for limits  
+        file = TFile(self.file_rlt_root) ;
+        workspace = file.Get("workspace4limit_") ;
+        workspace.Print()
+
+        ### iterate on the workspace element parameters
+        print "----------- Parameter Workspace -------------";
+        parameters_workspace = workspace.allVars();
+        par = parameters_workspace.createIterator();
+        par.Reset();
+        param = par.Next()
+        while (param):
+            param.Print();
+            param=par.Next()
+        print "---------------------------------------------";
+
+        workspace.data("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label)).Print()
+
+        print "----------- Pdf in the Workspace -------------";
+        pdfs_workspace = workspace.allPdfs();
+        par = pdfs_workspace.createIterator();
+        par.Reset();
+        param=par.Next()
+        while (param):
+            param.Print();
+            param = par.Next()
+        print "----------------------------------------------";
+
+        rrv_x = workspace.var("rrv_mass_lvj")
+        data_obs = workspace.data("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label));
+        if TString(self.prime_signal_sample).Contains("BulkG_WW"):
+            model_pdf_signal = workspace.pdf("BulkWW_%s_%s"%(self.categoryLabel,self.wtagger_label));
+        else:
+            model_pdf_signal = workspace.pdf("%s_%s_%s"%(self.prime_signal_sample,self.categoryLabel,self.wtagger_label));
+
+        model_pdf_WJets  = workspace.pdf("WJets_%s_%s"%(self.categoryLabel,self.wtagger_label));
+        model_pdf_VV     = workspace.pdf("VV_%s_%s"%(self.categoryLabel,self.wtagger_label));
+        model_pdf_TTbar  = workspace.pdf("TTbar_%s_%s"%(self.categoryLabel,self.wtagger_label));
+        model_pdf_SingleT   = workspace.pdf("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label));
+
+        model_pdf_signal.Print();
+        model_pdf_WJets.Print();
+        model_pdf_VV.Print();
+        model_pdf_TTbar.Print();
+        model_pdf_SingleT.Print();
+
+        if TString(self.prime_signal_sample).Contains("BulkG_WW"):
+            rrv_number_signal = workspace.var("rate_BulkWW_for_unbin");
+        else:
+            rrv_number_signal = workspace.var("rate_%s_for_unbin"%(self.prime_signal_sample));
+
+
+        rrv_number_WJets  = workspace.var("rate_WJets_for_unbin");
+        rrv_number_VV     = workspace.var("rate_VV_for_unbin");
+        rrv_number_TTbar  = workspace.var("rate_TTbar_for_unbin");
+        rrv_number_SingleT   = workspace.var("rate_SingleT_for_unbin");
+
+        rrv_number_signal.Print();
+        rrv_number_WJets.Print();
+        rrv_number_VV.Print();
+        rrv_number_TTbar.Print();
+        rrv_number_SingleT.Print();
+
+        #### Prepare the final plot starting from total background 
+        rrv_number_Total_background_MC = RooRealVar("rrv_number_Total_background_MC","rrv_number_Total_background_MC",
+                rrv_number_WJets.getVal()+
+                rrv_number_VV.getVal()+
+                rrv_number_TTbar.getVal()+
+                rrv_number_SingleT.getVal());
+
+        rrv_number_Total_background_MC.setError(TMath.Sqrt(
+            rrv_number_WJets.getError()* rrv_number_WJets.getError()+
+            rrv_number_VV.getError()* rrv_number_VV.getError()+
+            rrv_number_TTbar.getError()* rrv_number_TTbar.getError()+
+            rrv_number_SingleT.getError() *rrv_number_SingleT.getError()
+            ));
+
+        #### Total pdf 
+        model_Total_background_MC = RooAddPdf("model_Total_background_MC","model_Total_background_MC",RooArgList(model_pdf_WJets,model_pdf_VV,model_pdf_TTbar,model_pdf_SingleT),RooArgList(rrv_number_WJets,rrv_number_VV,rrv_number_TTbar,rrv_number_SingleT));
+
+        scale_number_signal = rrv_number_signal.getVal()/data_obs.sumEntries()
+        #### scale factor in order to scale MC to data in the final plot -> in order to avoid the normalization to data which is done by default in rooFit
+        scale_number_Total_background_MC = rrv_number_Total_background_MC.getVal()/data_obs.sumEntries()
+
+        #### create the frame
+        mplot = rrv_x.frame(RooFit.Title("check_workspace"), RooFit.Bins(int(rrv_x.getBins()/self.BinWidth_narrow_factor)));
+        data_obs.plotOn(mplot , RooFit.Name("data_invisible"), RooFit.MarkerSize(1.5), RooFit.DataError(RooAbsData.Poisson), RooFit.XErrorSize(0), RooFit.MarkerColor(0), RooFit.LineColor(0));
+
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("WJets"), RooFit.Components("WJets_%s_%s,VV_%s_%s,TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["WJets"]), RooFit.LineColor(kBlack), RooFit.VLines());
+
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("VV"), RooFit.Components("VV_%s_%s,TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["VV"]), RooFit.LineColor(kBlack), RooFit.VLines());
+
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("TTbar"), RooFit.Components("TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["TTbar"]), RooFit.LineColor(kBlack), RooFit.VLines());
+
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("SingleT"), RooFit.Components("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["SingleT"]), RooFit.LineColor(kBlack), RooFit.VLines());
+
+        #solid line
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("WJets_line_invisible"), RooFit.Components("WJets_%s_%s,VV_%s_%s,TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
+
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("VV_line_invisible"), RooFit.Components("VV_%s_%s,TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
+
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("TTbar_line_invisible"), RooFit.Components("TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
+
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("SingleT_line_invisible"), RooFit.Components("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
+
+        ### signal scale to be visible in the plots
+        label_tstring = TString(self.prime_signal_sample);
+        if label_tstring.Contains("600") and (not label_tstring.Contains("1600")):
+            signal_scale=20*self.xs_rescale;
+        elif label_tstring.Contains("700") and (not label_tstring.Contains("1700")):
+            signal_scale=20*self.xs_rescale;
+        elif label_tstring.Contains("800") and (not label_tstring.Contains("1800")):
+            signal_scale=20*self.xs_rescale;
+        else:
+            signal_scale=25*self.xs_rescale;
+
+        model_pdf_signal.plotOn(mplot,RooFit.Normalization(scale_number_signal*signal_scale),RooFit.Name("%s #times %s"%(self.prime_signal_sample, signal_scale)),RooFit.DrawOption("L"), RooFit.LineColor(self.color_palet["Signal"]), RooFit.LineStyle(2), RooFit.VLines());
+
+        #### plot the observed data using poissonian error bar
+        self.getData_PoissonInterval(data_obs,mplot);
+
+        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Invisible());
+
+        mplot_pull=self.get_pull(rrv_x,mplot);
+
+        ### Plot the list of floating parameters and the uncertainty band is draw taking into account this floating list defined in the prepare_limit
+        draw_error_band(model_Total_background_MC, rrv_x.GetName(), rrv_number_Total_background_MC,self.FloatingParams,workspace ,mplot,self.color_palet["Uncertainty"],"F");
+
+        mplot.Print();
+        self.plot_legend = self.legend4Plot(mplot,0,1,-0.01,-0.05,0.11,0.);
+        self.plot_legend.SetTextSize(0.036);
+        mplot.addObject(self.plot_legend);
+
+        mplot.GetYaxis().SetRangeUser(1e-2,mplot.GetMaximum()*1.2);
+
+
+        parameters_list = RooArgList();
+        self.draw_canvas_with_pull( mplot, mplot_pull,parameters_list,"plots_%s_%s_%s_%s/m_lvj_fitting/"%(self.additioninformation, self.categoryLabel,self.PS_model,self.wtagger_label),"check_workspace_for_limit","",0,1);
+
+        if workspace.var("rrv_num_floatparameter_in_last_fitting"):
+            self.nPar_float_in_fitTo = int(workspace.var("rrv_num_floatparameter_in_last_fitting").getVal());
+        else:
+            self.nPar_float_in_fitTo = self.FloatingParams.getSize();
+        nBinX = mplot.GetNbinsX();
+        ndof  = nBinX-self.nPar_float_in_fitTo;
+        print "nPar=%s, chiSquare=%s/%s"%(self.nPar_float_in_fitTo, mplot.chiSquare( self.nPar_float_in_fitTo )*ndof, ndof );
+
+
+
+    ### in order to get the pull
+    def get_pull(self, rrv_x, mplot_orig):
+
+        print "############### draw the pull plot ########################"
+        hpull = mplot_orig.pullHist();
+        x = ROOT.Double(0.); y = ROOT.Double(0) ;
+        for ipoint in range(0,hpull.GetN()):
+            hpull.GetPoint(ipoint,x,y);
+            if(y == 0): hpull.SetPoint(ipoint,x,10)
+
+        mplot_pull = rrv_x.frame(RooFit.Title("Pull Distribution"), RooFit.Bins(int(rrv_x.getBins()/self.BinWidth_narrow_factor)));
+        medianLine = TLine(rrv_x.getMin(),0.,rrv_x.getMax(),0); medianLine.SetLineWidth(2); medianLine.SetLineColor(kRed);
+        mplot_pull.addObject(medianLine);
+        mplot_pull.addPlotable(hpull,"P");
+        mplot_pull.SetTitle("");
+        mplot_pull.GetXaxis().SetTitle("");
+        mplot_pull.GetYaxis().SetRangeUser(-5,5);
+        mplot_pull.GetYaxis().SetTitleSize(0.10);
+        mplot_pull.GetYaxis().SetLabelSize(0.10);
+        mplot_pull.GetXaxis().SetTitleSize(0.10);
+        mplot_pull.GetXaxis().SetLabelSize(0.10);
+        mplot_pull.GetYaxis().SetTitleOffset(0.40);
+        mplot_pull.GetYaxis().SetTitle("#frac{Data-Fit}{#sigma_{data}}");
+        mplot_pull.GetYaxis().CenterTitle();
+
+        return mplot_pull;
+       #### in order to make the banner on the plots
+    def banner4Plot(self, iswithpull=0):
+        print "############### draw the banner ########################"
+
+        if iswithpull:
+            if TString(self.categoryLabel).Contains("el"):
+                #        banner = TLatex(0.3,0.96,("CMS Preliminary, %.1f fb^{-1} at #sqrt{s} = 8 TeV, W#rightarrow e #nu "%(self.GetLumi())));
+                banner = TLatex(0.18,0.96,"CMS                                             L = 19.7 fb^{-1} at #sqrt{s} = 8 TeV");
+            elif TString(self.categoryLabel).Contains("mu"):
+                #        banner = TLatex(0.3,0.96,("CMS Preliminary, %.1f fb^{-1} at #sqrt{s} = 8 TeV, W#rightarrow #mu #nu "%(self.GetLumi())));
+                banner = TLatex(0.18,0.96,"CMS                                             L = 19.7 fb^{-1} at #sqrt{s} = 8 TeV");
+            elif TString(self.categoryLabel).Contains("em"):
+                #        banner = TLatex(0.3,0.96,("CMS Preliminary, %.1f fb^{-1} at #sqrt{s} = 8 TeV, W#rightarrow #mu,e #nu "%(self.GetLumi())));
+                banner = TLatex(0.18,0.96,"CMS                                             L = 19.7 fb^{-1} at #sqrt{s} = 8 TeV");
+            banner.SetNDC(); banner.SetTextSize(0.041);
+        else:
+            if TString(self.categoryLabel).Contains("el"):
+                #        banner = TLatex(0.22,0.96,("CMS Preliminary, %.1f fb^{-1} at #sqrt{s} = 8 TeV, W#rightarrow e #nu "%(self.GetLumi())));
+                banner = TLatex(0.18,0.96,"CMS                                         L = 19.7 fb^{-1} at #sqrt{s} = 8 TeV");
+            if TString(self.categoryLabel).Contains("mu"):
+                #        banner = TLatex(0.22,0.96,("CMS Preliminary, %.1f fb^{-1} at #sqrt{s} = 8 TeV, W#rightarrow #mu #nu "%(self.GetLumi())));
+                banner = TLatex(0.18,0.96,"CMS                                         L = 19.7 fb^{-1} at #sqrt{s} = 8 TeV");
+            if TString(self.categoryLabel).Contains("em"):
+                #        banner = TLatex(0.22,0.96,("CMS Preliminary, %.1f fb^{-1} at #sqrt{s} = 8 TeV, W#rightarrow #mu,e #nu "%(self.GetLumi())));
+                banner = TLatex(0.18,0.96,"CM                                          L = 19.7 fb^{-1} at #sqrt{s} = 8 TeV");
+            banner.SetNDC(); banner.SetTextSize(0.033);
+
+        return banner;
+
+
+    ##### Prepare the workspace for the limit and to store info to be printed in the datacard
+    def prepare_limit(self,mode, isTTbarFloating=0, isVVFloating=0, isSingleTFloating=0):
+        print "####################### prepare_limit for %s method ####################"%(mode);
+
+        getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_mass_lvj"));
+
+        ### whole number of events from the considered signal sample, WJets, VV, TTbar, SingleT -> couting
+        #if TString(self.prime_signal_sample).Contains("BulkG_WW"):
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone("rate_BulkWW_for_counting"))
+        #else:
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone("rate_%s_for_counting"%(self.prime_signal_sample)))
+
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_WJets0_%s_mlvj"%(self.categoryLabel)).clone("rate_WJets_for_counting"))
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_VV_%s_mlvj"%(self.categoryLabel)).clone("rate_VV_for_counting"))
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_TTbar_%s_mlvj"%(self.categoryLabel)).clone("rate_TTbar_for_counting"))
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_SingleT_%s_mlvj"%(self.categoryLabel)).clone("rate_SingleT_for_counting"))
+
+        #### number of signal, Wjets, VV, TTbar and SingleT --> unbin
+        #if TString(self.prime_signal_sample).Contains("BulkG_WW"):
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_%s_signalregion_%s_mlvj"%(self.prime_signal_sample, self.categoryLabel)).clone("rate_BulkWW_for_unbin"));
+        #else:
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_%s_signalregion_%s_mlvj"%(self.prime_signal_sample, self.categoryLabel)).clone("rate_%s_for_unbin"%(self.prime_signal_sample)));
+
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_WJets0_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_WJets_for_unbin"));
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_VV_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_VV_for_unbin"));
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_TTbar_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_TTbar_for_unbin"));
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_SingleT_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_SingleT_for_unbin"));
+
+        #### Set the error properly -> taking into account lumi, Vtagger and theoretical uncertainty on XS -> for VV, TTbar and SingleT
+        #self.workspace4limit_.var("rate_VV_for_unbin").setError(self.workspace4limit_.var("rate_VV_for_unbin").getVal()*TMath.Sqrt( self.lumi_uncertainty*self.lumi_uncertainty + self.rrv_wtagger_eff_reweight_forV.getError()/self.rrv_wtagger_eff_reweight_forV.getVal()*self.rrv_wtagger_eff_reweight_forV.getError()/self.rrv_wtagger_eff_reweight_forV.getVal() +self.XS_VV_uncertainty*self.XS_VV_uncertainty ) );
+        #self.workspace4limit_.var("rate_SingleT_for_unbin").setError(self.workspace4limit_.var("rate_SingleT_for_unbin").getVal()*TMath.Sqrt( self.lumi_uncertainty*self.lumi_uncertainty + self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal()*self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal() +self.XS_SingleT_uncertainty*self.XS_SingleT_uncertainty ) );
+        #self.workspace4limit_.var("rate_TTbar_for_unbin").setError(self.workspace4limit_.var("rate_TTbar_for_unbin").getVal()*TMath.Sqrt( self.lumi_uncertainty*self.lumi_uncertainty + self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal()*self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal() ))
+
+        #### Get the dataset for data into the signal region
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.data("rdataset_data_signalregion_%s_mlvj"%(self.categoryLabel)).Clone("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label)))
+        #### Take the corrected pdf from the alpha method for the WJets
+        #if mode=="sideband_correction_method1":
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_WJets0_signalregion_%s_after_correct_mlvj"%(self.categoryLabel)).clone("WJets_%s_%s"%(self.categoryLabel, self.wtagger_label)));
+
+        #if isTTbarFloating:
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_TTbar_signalregion_%s_mlvj_Deco_TTbar_signalregion_%s_%s_mlvj"%(self.categoryLabel, self.categoryLabel, self.wtagger_label)).clone("TTbar_%s_%s"%(self.categoryLabel,self.wtagger_label)))
+        #else :
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_TTbar_signalregion_%s_mlvj"%(self.categoryLabel, self.categoryLabel, self.wtagger_label)).clone("TTbar_%s_%s"%(self.categoryLabel,self.wtagger_label)))
+
+        #if isSingleTFloating :     
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_SingleT_signalregion_%s_mlvj_Deco_SingleT_signalregion_%s_%s_mlvj"%(self.categoryLabel, self.categoryLabel, self.wtagger_label)).clone("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label)))
+        #else :
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_SingleT_signalregion_%s_mlvj"%(self.categoryLabel)).clone("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label)))
+
+        #if isVVFloating :    
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_VV_signalregion_%s_mlvj_Deco_VV_signalregion_%s_%s_mlvj"%(self.categoryLabel, self.categoryLabel, self.wtagger_label)).clone("VV_%s_%s"%(self.categoryLabel,self.wtagger_label)))
+        #else:
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_VV_signalregion_%s_mlvj"%(self.categoryLabel)).clone("VV_%s_%s"%(self.categoryLabel,self.wtagger_label)))
+
+        #if TString(self.prime_signal_sample).Contains("BulkG_WW"):
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_%s_signalregion_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone("BulkWW_%s_%s"%(self.categoryLabel, self.wtagger_label)))
+        #else:    
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_%s_signalregion_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone(self.prime_signal_sample+"_%s_%s"%(self.categoryLabel, self.wtagger_label)))
+
+        #### Fix all the Pdf parameters 
+        #rrv_x = self.workspace4limit_.var("rrv_mass_lvj");
+
+        #self.fix_Pdf(self.workspace4limit_.pdf("TTbar_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooArgSet(rrv_x) );            
+        #self.fix_Pdf(self.workspace4limit_.pdf("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooArgSet(rrv_x));
+        #self.fix_Pdf(self.workspace4limit_.pdf("VV_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooArgSet(rrv_x));
+        #self.fix_Pdf(self.workspace4limit_.pdf("WJets_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooArgSet(rrv_x));
+
+        #if TString(self.prime_signal_sample).Contains("BulkG_WW"):            
+        #    self.fix_Pdf(self.workspace4limit_.pdf("BulkWW_%s_%s"%(self.categoryLabel, self.wtagger_label)), RooArgSet(rrv_x));
+        #else:    
+        #    self.fix_Pdf(self.workspace4limit_.pdf(self.prime_signal_sample+"_%s_%s"%(self.categoryLabel, self.wtagger_label)), RooArgSet(rrv_x));
+
+        #print " ############## Workspace for limit ";
+        #parameters_workspace = self.workspace4limit_.allVars();
+        #par = parameters_workspace.createIterator();
+        #par.Reset();
+        #param = par.Next()
+        #while (param):
+        #    param.Print();
+        #    param=par.Next()
+
+        #params_list = [];
+        #### main modality for the alpha function method
+        #if mode=="sideband_correction_method1":
+
+        #    if self.MODEL_4_mlvj=="ErfExp_v1" or self.MODEL_4_mlvj=="ErfPow_v1" or self.MODEL_4_mlvj=="2Exp" :
+        #        ### uncertainty inflation on the Wjets shape from fitting data in lowersideband
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+        #        ### Add to the parameter list
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)));
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)));
+
+        #        ### Do the same for alpha paramter
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig5"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        ### Add to the parameter list
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0sim_%s_%s_mlvj_eig5"%(self.categoryLabel, self.wtagger_label)))
+
+        #        ### Do the same for the TTbar
+        #        if isTTbarFloating !=0 :
+        #            self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
+        #         self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
+        #         self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
+
+        #         params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
+        #         params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
+        #         params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)));
+
+
+        #    if self.MODEL_4_mlvj=="ErfPow2_v1" or self.MODEL_4_mlvj=="ErfPowExp_v1" :
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)));
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)));
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)));
+
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig5"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig6"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig7"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig5"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig6"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig7"%(self.categoryLabel, self.wtagger_label)))
+
+
+        #        if isTTbarFloating !=0 :
+        #            self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
+        #         self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
+        #         self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
+        #         self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
+
+        #         params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
+        #         params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
+        #         params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)));
+        #         params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)));
+
+
+        #    if self.MODEL_4_mlvj=="Exp" or self.MODEL_4_mlvj=="Pow" :
+
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
+
+
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)))
+
+        #        if isTTbarFloating !=0 :
+        #            self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
+        #         params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
+
+        #    if self.MODEL_4_mlvj=="ExpN" or self.MODEL_4_mlvj=="ExpTail" or self.MODEL_4_mlvj=="Pow2" :
+
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+        #        self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
+
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)));
+
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+        #        self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
+
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)))
+        #        params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)))
+
+
+        #        ### TTbar use exp
+        #        if isTTbarFloating !=0:
+        #            print "##################### TTbar will float in the limit procedure + final plot ######################";
+        #            self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
+        #            params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
+
+        #        ### VV use ExpTail:
+        #        if isVVFloating !=0:
+        #            print "##################### VV will float in the limit procedure + final plot ######################";
+        #          self.workspace4limit_.var("Deco_VV_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_VV);
+        #          self.workspace4limit_.var("Deco_VV_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_VV);
+        #          params_list.append(self.workspace4limit_.var("Deco_VV_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
+        #          params_list.append(self.workspace4limit_.var("Deco_VV_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
+
+        #        ### SingleT use Exp:
+        #        if isSingleTFloating !=0:
+        #            print "##################### SingleT will float in the limit procedure + final plot ######################";
+        #          self.workspace4limit_.var("Deco_SingleT_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_SingleT);
+        #          params_list.append(self.workspace4limit_.var("Deco_SingleT_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
+
+
+        ##### add signal shape parameters' uncertainty -> increase the uncertainty on the mean and the sigma since we are using a CB or a Double CB or a BWxDB or BWxCB
+        #if self.workspace4limit_.var("rrv_mean_CB_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)):
+
+        #    self.workspace4limit_.var( "rrv_mean_shift_scale_lep_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.mean_signal_uncertainty_lep_scale);
+        #   self.workspace4limit_.var( "rrv_mean_shift_scale_jes_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.mean_signal_uncertainty_jet_scale);
+        #   self.workspace4limit_.var( "rrv_sigma_shift_lep_scale_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.sigma_signal_uncertainty_lep_scale);
+        #   self.workspace4limit_.var( "rrv_sigma_shift_jes_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.sigma_signal_uncertainty_jet_scale);
+        #   self.workspace4limit_.var( "rrv_sigma_shift_res_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.sigma_signal_uncertainty_jet_res);
+
+        #   if self.categoryLabel == "mu":
+        #       self.workspace4limit_.var("CMS_sig_p1_scale_m").setError(1);
+        #    self.workspace4limit_.var("CMS_sig_p2_scale_m").setError(1);
+        #    params_list.append(self.workspace4limit_.var("CMS_sig_p1_scale_m"));
+        #    params_list.append(self.workspace4limit_.var("CMS_sig_p2_scale_m"));
+        #elif self.categoryLabel == "el":
+        #    self.workspace4limit_.var("CMS_sig_p1_scale_e").setError(1);
+        #    self.workspace4limit_.var("CMS_sig_p2_scale_e").setError(1);
+        #    params_list.append(self.workspace4limit_.var("CMS_sig_p1_scale_e"));
+        #    params_list.append(self.workspace4limit_.var("CMS_sig_p2_scale_e"));
+        #elif self.categoryLabel == "em":
+        #    self.workspace4limit_.var("CMS_sig_p1_scale_em").setError(1);
+        #    self.workspace4limit_.var("CMS_sig_p2_scale_em").setError(1);
+        #    params_list.append(self.workspace4limit_.var("CMS_sig_p1_scale_em"));
+        #    params_list.append(self.workspace4limit_.var("CMS_sig_p2_scale_em"));
+
+        #   self.workspace4limit_.var("CMS_sig_p1_jes").setError(1);
+        #   self.workspace4limit_.var("CMS_sig_p2_jes").setError(1);
+        #   self.workspace4limit_.var("CMS_sig_p2_jer").setError(1);
+
+        #   params_list.append(self.workspace4limit_.var("CMS_sig_p1_jes"));
+        #   params_list.append(self.workspace4limit_.var("CMS_sig_p2_jes"));
+        #   params_list.append(self.workspace4limit_.var("CMS_sig_p2_jer"));
+
+
+        #### calculate the shape uncertainty for cut-and-counting
+        #self.rrv_counting_uncertainty_from_shape_uncertainty = RooRealVar("rrv_counting_uncertainty_from_shape_uncertainty_%s"%(self.categoryLabel),"rrv_counting_uncertainty_from_shape_uncertainty_%s"%(self.categoryLabel),0);
+        #self.rrv_counting_uncertainty_from_shape_uncertainty.setError( Calc_error("WJets_%s_%s"%(self.categoryLabel,self.wtagger_label), "rrv_mass_lvj" ,self.FloatingParams,self.workspace4limit_,"signalregion") );
+        #self.rrv_counting_uncertainty_from_shape_uncertainty.Print();
+
+        #print " param list ",params_list ;
+
+        ### Print the datacard for unbin and couting analysis
+        #self.print_limit_datacard("unbin",params_list);
+        self.print_limit_datacard("counting");
+        ### Save the workspace
+        self.save_workspace_to_file();
+
+
+
+    #### Method used in order to save the workspace in a output root file
+    def save_workspace_to_file(self):
+        self.workspace4limit_.writeToFile(self.file_rlt_root);
+        self.file_out.close()
+
+
+    #### Method used to print the general format of the datacard for both counting and unbinned analysis
+    def print_limit_datacard(self, mode, params_list=[]):
+        print "############## print_limit_datacard for %s ################"%(mode)
+        if not (mode == "unbin" or mode == "counting"):
+            print "print_limit_datacard use wrong mode: %s"%(mode);raw_input("ENTER");
+
+        ### open the datacard    
+        datacard_out = open(getattr(self,"file_datacard_%s"%(mode)),"w");
+
+        ### start to print inside 
+        datacard_out.write( "imax 1" )
+        datacard_out.write( "\njmax 4" )
+        datacard_out.write( "\nkmax *" )
+        datacard_out.write( "\n--------------- ")
+
+        #if mode == "unbin":
+        #    fnOnly = ntpath.basename(self.file_rlt_root) ## workspace for limit --> output file for the workspace
+        #    if TString(self.prime_signal_sample).Contains("BulkG_WW"):
+        #        datacard_out.write("\nshapes BulkWW  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
+        #    else:
+        #        datacard_out.write("\nshapes %s  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.prime_signal_sample,self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
+
+        #    datacard_out.write("\nshapes WJets  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
+        #    datacard_out.write("\nshapes TTbar  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
+        #    datacard_out.write("\nshapes SingleT   CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
+        #    datacard_out.write("\nshapes VV     CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
+        #    datacard_out.write("\nshapes data_obs   CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
+        #    datacard_out.write( "\n--------------- ")
+
+        #datacard_out.write( "\nbin CMS_%s1J%s "%(self.categoryLabel,self.wtagger_label));    
+        #if mode == "unbin":
+        #    datacard_out.write( "\nobservation %0.2f "%(self.workspace4limit_.data("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label)).sumEntries()) )
+        #if mode == "counting":
+        #    datacard_out.write( "\nobservation %0.2f "%(self.workspace4limit_.var("observation_for_counting").getVal()) )
+
+        #datacard_out.write( "\n------------------------------" );
+
+        #datacard_out.write( "\nbin CMS_%s1J%s CMS_%s1J%s CMS_%s1J%s CMS_%s1J%s CMS_%s1J%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label));
+
+        #if TString(self.prime_signal_sample).Contains("BulkG_WW"):
+        #    datacard_out.write( "\nprocess BulkWW WJets TTbar SingleT VV"); ## just one signal sample
+        #else:
+        #    datacard_out.write( "\nprocess %s WJets TTbar SingleT VV "%(self.prime_signal_sample)); ## just one signal sample
+
+        #datacard_out.write( "\nprocess -1 1 2 3 4" );
+
+        #### rates for the different process
+        #if mode == "unbin":
+        #    if TString(self.prime_signal_sample).Contains("BulkG_WW"):                    
+        #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f "%(self.workspace4limit_.var("rate_BulkWW_for_unbin").getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_unbin").getVal(), self.workspace4limit_.var("rate_TTbar_for_unbin").getVal(), self.workspace4limit_.var("rate_SingleT_for_unbin").getVal(), self.workspace4limit_.var("rate_VV_for_unbin").getVal() ) )
+        #    else:
+        #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f "%(self.workspace4limit_.var("rate_%s_for_unbin"%(self.prime_signal_sample)).getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_unbin").getVal(), self.workspace4limit_.var("rate_TTbar_for_unbin").getVal(), self.workspace4limit_.var("rate_SingleT_for_unbin").getVal(), self.workspace4limit_.var("rate_VV_for_unbin").getVal() ) )
+
+        #if mode == "counting":
+        #    if TString(self.prime_signal_sample).Contains("BulkG_WW"):                    
+        #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f"%(self.workspace4limit_.var("rate_BulkWW_for_counting").getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_counting").getVal(), self.workspace4limit_.var("rate_TTbar_for_counting").getVal(), self.workspace4limit_.var("rate_SingleT_for_counting").getVal(), self.workspace4limit_.var("rate_VV_for_counting").getVal() ) )
+        #    else : 
+        #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f"%(self.workspace4limit_.var("rate_%s_for_counting"%(self.prime_signal_sample)).getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_counting").getVal(), self.workspace4limit_.var("rate_TTbar_for_counting").getVal(), self.workspace4limit_.var("rate_SingleT_for_counting").getVal(), self.workspace4limit_.var("rate_VV_for_counting").getVal() ) )
+
+        #datacard_out.write( "\n-------------------------------- " )
+
+        #### luminosity nouisance
+        #datacard_out.write( "\nlumi_8TeV lnN %0.3f - %0.3f %0.3f %0.3f"%(1.+self.lumi_uncertainty, 1.+self.lumi_uncertainty,1.+self.lumi_uncertainty,1.+self.lumi_uncertainty) )
+
+        #### SingleT XS  nouisance in boosted regime
+        #datacard_out.write( "\nCMS_XS_SingleT lnN - - - %0.3f -"%(1+self.XS_SingleT_uncertainty) )
+
+        #### VV XS  nouisance in boosted regime
+        #datacard_out.write( "\nCMS_XS_VV lnN - - - - %0.3f"%(1+self.XS_VV_uncertainty) )
+
+        #### WJets Normalization from data fit -> data driven
+        #if self.number_WJets_insideband >0:
+        #    datacard_out.write( "\nCMS_WJ_norm gmN %0.3f %0.3f - - -"%(self.number_WJets_insideband, getattr(self, "datadriven_alpha_WJets_%s"%(mode)) ) )
+        #else:
+        #    datacard_out.write( "\nCMS_WJ_norm_%s_%s lnN - %0.3f - - -"%(self.categoryLabel, self.wtagger_label, 1+ self.workspace4limit_.var("rate_WJets_for_unbin").getError()/self.workspace4limit_.var("rate_WJets_for_unbin").getVal() ) );
+
+        #### Top normalization due to SF in the ttbar CR
+        #datacard_out.write( "\nCMS_Top_norm_%s_%s lnN - - %0.3f %0.3f -"%(self.categoryLabel, self.wtagger_label, 1+self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal(), 1+self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal() ) );
+
+        #### V-Tagger SF nouisance
+        #if self.wtagger_label == "HP":
+        #    datacard_out.write( "\nCMS_eff_vtag_tau21_sf lnN %0.3f/%0.3f - - - %0.3f/%0.3f"%(1+self.rrv_wtagger_eff_reweight_forV.getError(),1-self.rrv_wtagger_eff_reweight_forV.getError(), 1+self.rrv_wtagger_eff_reweight_forV.getError(),1-self.rrv_wtagger_eff_reweight_forV.getError()));
+        #elif self.wtagger_label == "LP":
+        #    datacard_out.write( "\nCMS_eff_vtag_tau21_sf lnN %0.3f/%0.3f - - - %0.3f/%0.3f"%(1-self.rrv_wtagger_eff_reweight_forV.getError(),1+self.rrv_wtagger_eff_reweight_forV.getError(), 1-self.rrv_wtagger_eff_reweight_forV.getError(),1+self.rrv_wtagger_eff_reweight_forV.getError()));
+        #else:
+        #    datacard_out.write( "\nCMS_eff_vtag_tau21_sf lnN %0.3f/%0.3f - - - %0.3f/%0.3f"%(1+self.rrv_wtagger_eff_reweight_forV.getError(),1-self.rrv_wtagger_eff_reweight_forV.getError(), 1+self.rrv_wtagger_eff_reweight_forV.getError(),1-self.rrv_wtagger_eff_reweight_forV.getError()));
+
+        #### btag scale factor on the MC background
+#       # datacard_out.write( "\nCMS_btagger lnN - - %0.3f %0.3f %0.3f"%(self.categoryLabel, 1+self.btag_scale_uncertainty, 1+self.btag_scale_uncertainty, 1+self.btag_scale_uncertainty ) );
+
+        #### btag scale factor on the MC background
+        #datacard_out.write( "\n#CMS_eff_vtag_model lnN %0.3f - - - %0.3f"%(1+self.eff_vtag_model,1+self.eff_vtag_model) );
+
+        #### jet Mass effect only if available -> shapes changing due to the jet mass uncertainty (JEC for CA8/AK7) -> affects also WJets
+        #if ( self.workspace4fit_.var("rrv_number_WJets0_massup_in_mj_signalregion_from_fitting_%s"%(self.categoryLabel)) and
+        #        self.workspace4fit_.var("rrv_number_WJets0_massdn_in_mj_signalregion_from_fitting_%s"%(self.categoryLabel)) and
+        #        self.workspace4fit_.var("rrv_number_dataset_signalregion_SingleT_massup_%s_mj"%(self.categoryLabel)) and
+        #        self.workspace4fit_.var("rrv_number_dataset_signalregion_SingleT_massdown_%s_mj"%(self.categoryLabel)) and
+        #        self.workspace4fit_.var("rrv_number_dataset_signalregion_TTbar_massup_%s_mj"%(self.categoryLabel)) and
+        #        self.workspace4fit_.var("rrv_number_dataset_signalregion_TTbar_massdn_%s_mj"%(self.categoryLabel)) and
+        #        self.workspace4fit_.var("rrv_number_dataset_signalregion_VV_massup_%s_mj"%(self.categoryLabel)) and
+        #        self.workspace4fit_.var("rrv_number_dataset_signalregion_VV_massdn_%s_mj"%(self.categoryLabel))) :
+
+        #    datacard_out.write( "\nJetMass_%s lnN - %0.3f %0.3f %0.3f %0.3f"%(self.categoryLabel, 1+self.WJets_normlization_uncertainty_from_jet_mass, 1+self.TTbar_normlization_uncertainty_from_jet_mass, 1+self.SingleT_normlization_uncertainty_from_jet_mass, 1+self.VV_normlization_uncertainty_from_jet_mass ) )
+
+        #if self.categoryLabel == "mu":
+        #    self.channel_short = "m"
+        #elif self.categoryLabel =="el":
+        #    self.channel_short = "e"
+        #elif self.categoryLabel =="em":
+        #    self.channel_short = "em"
+
+        #### trigger efficiency
+        #datacard_out.write( "\nCMS_trigger_%s lnN %0.3f - %0.3f %0.3f %0.3f"%(self.channel_short, 1+self.lep_trigger_uncertainty,1+self.lep_trigger_uncertainty,1+self.lep_trigger_uncertainty,1+self.lep_trigger_uncertainty ) );
+
+        #### Lepton SF
+        #datacard_out.write( "\nCMS_eff_%s lnN %0.3f - %0.3f %0.3f %0.3f"%(self.channel_short, 1+self.lep_eff_uncertainty, 1+self.lep_eff_uncertainty,1+self.lep_eff_uncertainty,1+self.lep_eff_uncertainty ) );
+
+        ############# Evaluated just for signal, in principle also on all the backgrounds with the same topology
+
+        #### Lepton Energy scale
+        #datacard_out.write( "\nCMS_scale_%s lnN %0.3f - - - -"%(self.channel_short,1+self.signal_lepton_energy_scale_uncertainty));
+
+        #### Lepton Energy Resolution
+        #datacard_out.write( "\nCMS_res_%s lnN %0.3f - - - -"%(self.channel_short,1+self.signal_lepton_energy_res_uncertainty));
+
+        #### CA8 jet energy scale
+        #datacard_out.write( "\nCMS_scale_j  lnN %0.3f - - - -"%(1+self.signal_jet_energy_scale_uncertainty));
+
+        #### CA8 jet energy resolution
+        #datacard_out.write( "\nCMS_res_j  lnN %0.3f - - - -"%(1+self.signal_jet_energy_res_uncertainty));
+
+        #### btag on the signal
+        #datacard_out.write( "\nCMS_btag_eff lnN %0.3f - - - -"%(1+self.signal_btag_uncertainty));
+
+
+        #### print shapes parameter to be taken int account
+        #if mode == "unbin":
+        #    for ipar in params_list:
+        #        print "Name %s",ipar.GetName();
+        #      if TString(ipar.GetName()).Contains("Deco_TTbar_signalregion"):
+        #          datacard_out.write( "\n%s param %0.1f %0.1f "%( ipar.GetName(), ipar.getVal(), ipar.getError() ) )
+        #      else:
+        #          datacard_out.write( "\n%s param %0.1f %0.1f "%( ipar.GetName(), ipar.getVal(), ipar.getError() ) )
+        #if mode == "counting":
+        #    datacard_out.write( "\nShape_%s_%s lnN - - %0.3f - - -"%(self.categoryLabel, self.wtagger_label, 1+self.rrv_counting_uncertainty_from_shape_uncertainty.getError()))
+
+ 
+    def draw_canvas_with_pull(self, mplot, mplot_pull,parameters_list,in_directory, label, in_model_name="", show_constant_parameter=0, logy=0):# mplot + pull
+
+        print "############### draw the canvas with pull ########################"
+        mplot.GetXaxis().SetTitleOffset(1.1);
+        mplot.GetYaxis().SetTitleOffset(1.3);
+        mplot.GetXaxis().SetTitleSize(0.055);
+        mplot.GetYaxis().SetTitleSize(0.055);
+        mplot.GetXaxis().SetLabelSize(0.045);
+        mplot.GetYaxis().SetLabelSize(0.045);
+        mplot_pull.GetXaxis().SetLabelSize(0.14);
+        mplot_pull.GetYaxis().SetLabelSize(0.14);
+        mplot_pull.GetYaxis().SetTitleSize(0.15);
+        mplot_pull.GetYaxis().SetNdivisions(205);
+
+
+        cMassFit = TCanvas("cMassFit","cMassFit", 600,600);
+        # if parameters_list is empty, don't draw pad3
+        par_first=parameters_list.createIterator();
+        par_first.Reset();
+        param_first=par_first.Next()
+        doParameterPlot = 0 ;
+        if param_first and doParameterPlot != 0:
+            pad1=TPad("pad1","pad1",0.,0. ,0.8,0.24);
+            pad2=TPad("pad2","pad2",0.,0.24,0.8,1. );
+            pad3=TPad("pad3","pad3",0.8,0.,1,1);
+            pad1.Draw();
+            pad2.Draw();
+            pad3.Draw();
+        else:
+            pad1=TPad("pad1","pad1",0.,0. ,0.99,0.24);
+            pad2=TPad("pad2","pad2",0.,0.24,0.99,1. );
+            pad1.Draw();
+            pad2.Draw();
+
+        pad2.cd();
+        mplot.Draw();
+        banner = self.banner4Plot(1);
+        banner.Draw();
+
+        pad1.cd();
+        mplot_pull.Draw();
+
+        if param_first and doParameterPlot != 0:
+
+            pad3.cd();
+            latex=TLatex();
+            latex.SetTextSize(0.1);
+            par=parameters_list.createIterator();
+            par.Reset();
+            param=par.Next()
+            i=0;
+            while param:
+                if (not param.isConstant() ) or show_constant_parameter:
+                    param.Print();
+                    icolor=1;#if a paramenter is constant, color is 2
+                    if param.isConstant(): icolor=2
+                    latex.DrawLatex(0,0.9-i*0.04,"#color[%s]{%s}"%(icolor,param.GetName()) );
+                    latex.DrawLatex(0,0.9-i*0.04-0.02," #color[%s]{%4.3e +/- %2.1e}"%(icolor,param.getVal(),param.getError()) );
+                    i=i+1;
+                param=par.Next();
+
+        ## create the directory where store the plots
+        Directory = TString(in_directory+self.prime_signal_sample);
+        if not Directory.EndsWith("/"):Directory = Directory.Append("/");
+        if not os.path.isdir(Directory.Data()):
+            os.system("mkdir -p "+Directory.Data());
+
+        rlt_file = TString(Directory.Data()+label);
+        if rlt_file.EndsWith(".root"):
+            TString(in_model_name).ReplaceAll(".root","");
+            rlt_file.ReplaceAll(".root","_"+in_model_name+"_with_pull.png");
+        else:
+            TString(in_model_name).ReplaceAll(".root","");
+            rlt_file.ReplaceAll(".root","");
+            rlt_file=rlt_file.Append("_"+in_model_name+"_with_pull.png");
+
+        cMassFit.SaveAs(rlt_file.Data());
+
+        rlt_file.ReplaceAll(".png",".pdf");
+        cMassFit.SaveAs(rlt_file.Data());
+
+        rlt_file.ReplaceAll(".pdf",".root");
+        cMassFit.SaveAs(rlt_file.Data());
+
+        string_file_name = TString(label+"_"+in_model_name);
+
+        if logy:
+            mplot.GetYaxis().SetRangeUser(1e-3,mplot.GetMaximum()*200);
+            pad2.SetLogy() ;
+            pad2.Update();
+            cMassFit.Update();
+            rlt_file.ReplaceAll(".root","_log.root");
+            cMassFit.SaveAs(rlt_file.Data());
+            rlt_file.ReplaceAll(".root",".pdf");
+            cMassFit.SaveAs(rlt_file.Data());
+            rlt_file.ReplaceAll(".pdf",".png");
+            cMassFit.SaveAs(rlt_file.Data());
+
+        self.draw_canvas(mplot,in_directory,string_file_name.Data(),0,logy,1);
+
+    #### jusr drawing canvas with no pull
+    def draw_canvas(self, in_obj,in_directory, label, is_range=0, logy=0, frompull=0):
+
+        print "############### draw the canvas without pull ########################"
+        cMassFit = TCanvas("cMassFit","cMassFit", 600,600);
+
+        if frompull and logy :
+            in_obj.GetYaxis().SetRangeUser(1e-2,in_obj.GetMaximum()/200)
+        elif not frompull and logy :
+            in_obj.GetYaxis().SetRangeUser(0.00001,in_obj.GetMaximum())
+
+
+        if is_range:
+            h2=TH2D("h2","",100,400,1400,4,0.00001,4);
+            h2.Draw();
+            in_obj.Draw("same")
+        else :
+            in_obj.Draw()
+
+        in_obj.GetXaxis().SetTitleSize(0.045);
+        in_obj.GetXaxis().SetTitleOffset(1.15);
+        in_obj.GetXaxis().SetLabelSize(0.04);
+
+        in_obj.GetYaxis().SetTitleSize(0.055);
+        in_obj.GetYaxis().SetTitleOffset(1.40);
+        in_obj.GetYaxis().SetLabelSize(0.04);
+
+        self.plot_legend.SetTextSize(0.031); 
+
+        banner = self.banner4Plot();
+        banner.Draw();
+
+        Directory=TString(in_directory+self.prime_signal_sample);
+        if not Directory.EndsWith("/"):Directory=Directory.Append("/");
+        if not os.path.isdir(Directory.Data()):
+            os.system("mkdir -p "+Directory.Data());
+
+        rlt_file=TString(Directory.Data()+label);
+
+        rlt_file = rlt_file.Append(".png");
+        cMassFit.SaveAs(rlt_file.Data());
+
+        rlt_file.ReplaceAll(".png",".pdf");
+        cMassFit.SaveAs(rlt_file.Data());
+
+        #rlt_file.ReplaceAll(".pdf",".root");
+        #cMassFit.SaveAs(rlt_file.Data());
+
+        if logy:
+            in_obj.GetYaxis().SetRangeUser(1e-3,in_obj.GetMaximum()*200);
+            cMassFit.SetLogy() ;
+            cMassFit.Update();
+            #rlt_file.ReplaceAll(".root","_log.root");
+            #cMassFit.SaveAs(rlt_file.Data());
+            #rlt_file.ReplaceAll(".root",".pdf");
+            #cMassFit.SaveAs(rlt_file.Data());
+            rlt_file.ReplaceAll(".pdf",".png");
+            cMassFit.SaveAs(rlt_file.Data());
+
+
     def setTDRStyle(self): ## Set basic TDR style for canvas, pad ..etc ..
         print "setting TDR style"
         self.tdrStyle =TStyle("tdrStyle","Style for P-TDR");
@@ -556,11 +1389,12 @@ class doFit_wj_and_wlvj:
         self.tdrStyle.SetPaperSize(20.,20.);
         self.tdrStyle.cd();
 
-'''
     #### Method to make a RooAbsPdf giving label, model name, spectrum, if it is mc or not and a constraint list for the parameters          
-    def make_Pdf(self, label, in_model_name, mass_spectrum="_mj", ConstraintsList=[],ismc = 0):
+    def make_Pdf(self, label, fit_config, mass_spectrum="_mj", ConstraintsList=[],ismc = 0):
         if TString(mass_spectrum).Contains("_mj"): rrv_x = self.workspace4fit_.var("rrv_mass_j");
         if TString(mass_spectrum).Contains("_mlvj"): rrv_x = self.workspace4fit_.var("rrv_mass_lvj");
+
+        in_model_name=fit_config[1];
 
         # W mass: 80.385
         if in_model_name == "Voig":
@@ -995,59 +1829,64 @@ class doFit_wj_and_wlvj:
             print "########### Crystal Ball x Breit Wigner for Bulk Graviton width ############"
             label_tstring=TString(label);
 
-            if label_tstring.Contains("M1000_W50") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 1000);
-                    rrv_width_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 50);
-                    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,50.);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,50,0,200);
+            rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 1000);
+            rrv_width_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 50);
+            rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,50.);
+            rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,50,0,200);
 
-            elif label_tstring.Contains("M1000_W150") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 1000);
-                    rrv_width_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 150);
-                    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,50.);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,50,0,200);
+            #if label_tstring.Contains("M1000_W50") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 1000);
+            #    rrv_width_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 50);
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,50.);
+            #    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,50,0,200);
 
-            elif label_tstring.Contains("M1000_W300") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 1000);
-                    rrv_width_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 300);
-                    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,50.);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,50,0,200);
+            #elif label_tstring.Contains("M1000_W150") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 1000);
+            #    rrv_width_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 150);
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,50.);
+            #    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,50,0,200);
 
-            elif label_tstring.Contains("M1500_W75") and label_tstring.Contains("BulkG_WW"): 
-                rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500);
-                    rrv_sigma_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 175,50 ,300);
-                    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,50.);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,100,0,300);
+            #elif label_tstring.Contains("M1000_W300") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 1000);
+            #        rrv_width_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 300);
+            #        rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,50.);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,50,0,200);
 
-            elif label_tstring.Contains("M1500_W225") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500,1000,2000);
-                    rrv_sigma_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 225,150 ,450);
-                    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,80.);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,100,0,250);
+            #elif label_tstring.Contains("M1500_W75") and label_tstring.Contains("BulkG_WW"): 
+            #    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500);
+            #        rrv_sigma_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 175,50 ,300);
+            #        rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,50.);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,100,0,300);
 
-            elif label_tstring.Contains("M1500_W450") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500,1000,2000);
-                    rrv_sigma_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 450,150 ,450);
-                    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,80.);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,100,0,250);
+            #elif label_tstring.Contains("M1500_W225") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500,1000,2000);
+            #        rrv_sigma_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 225,150 ,450);
+            #        rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,80.);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,100,0,250);
 
-            elif label_tstring.Contains("M2100_W105") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100,1000,2000);
-                    rrv_sigma_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 105,150 ,450);
-                    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,80.);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,150,0,250);
+            #elif label_tstring.Contains("M1500_W450") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500,1000,2000);
+            #        rrv_sigma_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 450,150 ,450);
+            #        rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,80.);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,100,0,250);
 
-            elif label_tstring.Contains("M2100_W315") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100,1000,2000);
-                    rrv_sigma_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 315,150 ,450);
-                    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,80.);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,150,0,250);
+            #elif label_tstring.Contains("M2100_W105") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100,1000,2000);
+            #        rrv_sigma_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 105,150 ,450);
+            #        rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,80.);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,150,0,250);
 
-            elif label_tstring.Contains("M2100_W630") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100,1000,2000);
-                    rrv_sigma_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 630,150 ,450);
-                    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,80.);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,150,0,250);
+            #elif label_tstring.Contains("M2100_W315") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100,1000,2000);
+            #        rrv_sigma_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 315,150 ,450);
+            #        rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,80.);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,150,0,250);
+
+            #elif label_tstring.Contains("M2100_W630") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100,1000,2000);
+            #        rrv_sigma_BW = RooRealVar("rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 630,150 ,450);
+            #        rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel,"rrv_mean_CB"+label+"_"+self.categoryLabel,0.,0.,80.);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel,"rrv_sigma_CB"+label+"_"+self.categoryLabel,150,0,250);
 
             rrv_mean_BW.setConstant(kTRUE);
             rrv_width_BW.setConstant(kTRUE);
@@ -1105,262 +1944,269 @@ class doFit_wj_and_wlvj:
             label_tstring=TString(label);
             print "########### Double CB for Bulk graviton mlvj ############"
 
-            if label_tstring.Contains("M600") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M600_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 600, 550, 650);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 30,10 ,80);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+            #if label_tstring.Contains("M600") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M600_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 600, 550, 650);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 30,10 ,80);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
 
-            elif label_tstring.Contains("M700") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M700_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 700, 600, 800);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 30,10 ,80);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+            #elif label_tstring.Contains("M700") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M700_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 700, 600, 800);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 30,10 ,80);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
 
-            elif label_tstring.Contains("M800") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M800_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,820,790,880);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,50,40,70);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 15.,5.,25.);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.64,1.,1.9);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,15.,5.,25.);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,1.,1.9);
-
-
-            elif label_tstring.Contains("M900") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M900_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,920,850,950);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,59,45,70);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 25.,2,45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,25.,0.1,45);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.25,0.5,3.);
-
-            elif label_tstring.Contains("M1000") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1000_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1020,970,1070);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,55,40,65);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.5,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.5,3.5);
-
-            elif label_tstring.Contains("M1100") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1100_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1120,1080,1150);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,65,55,75);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,25);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,25);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-
-            elif label_tstring.Contains("M1200") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1200_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1220,1200,1250);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,65,55,75);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,30);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,5.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,30);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,5.);
-
-            elif label_tstring.Contains("M1300") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1300_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1320,1300,1350);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,70,60,75);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.3,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.3,0.5,3.);
+            #elif label_tstring.Contains("M800") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M800_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,820,790,880);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,50,40,70);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 15.,5.,25.);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.64,1.,1.9);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,15.,5.,25.);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,1.,1.9);
 
 
-            elif label_tstring.Contains("M1400") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1400_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1420,1400,1440);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,77,65,85);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
+            #elif label_tstring.Contains("M900") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M900_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,920,850,950);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,59,45,70);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 25.,2,45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,25.,0.1,45);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.25,0.5,3.);
 
-            elif label_tstring.Contains("M1500") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1500_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1515,1500,1530);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,81,71,91);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 15.,0.01,25);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,15.,0.01,25);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
+            #elif label_tstring.Contains("M1000") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1000_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1020,970,1070);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,55,40,65);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.5,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.5,3.5);
 
-            elif label_tstring.Contains("M1600") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1600_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1620,1600,1640);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,81,70,90);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #elif label_tstring.Contains("M1100") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1100_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1120,1080,1150);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,65,55,75);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,25);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,25);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
 
-            elif label_tstring.Contains("M1700") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1700_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1720,1700,1740);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,90,75,96);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #elif label_tstring.Contains("M1200") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1200_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1220,1200,1250);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,65,55,75);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,30);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,5.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,30);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,5.);
 
-            elif label_tstring.Contains("M1800") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1800_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1820,1800,1840);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,90,75,100);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #elif label_tstring.Contains("M1300") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1300_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1320,1300,1350);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,70,60,75);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.3,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.3,0.5,3.);
 
-            elif label_tstring.Contains("M1900") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1900_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1920,1900,1940);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,95,80,115);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
 
-            elif label_tstring.Contains("M2000") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M2000_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2020,2000,2040);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,100,80,115);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #elif label_tstring.Contains("M1400") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1400_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1420,1400,1440);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,77,65,85);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
 
-            elif label_tstring.Contains("M2100") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M2100_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2120,2100,2140);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,105,85,115);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #elif label_tstring.Contains("M1500") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1500_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1515,1500,1530);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,81,71,91);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 15.,0.01,25);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,15.,0.01,25);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
 
-            elif label_tstring.Contains("M2200") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M2200_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2220,2200,2250);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,115,75,140);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #elif label_tstring.Contains("M1600") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1600_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1620,1600,1640);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,81,70,90);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
 
-            elif label_tstring.Contains("M2300") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M2300_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2320,2300,2340);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,115,95,120);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 15.,0.2,30);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,15.,0.2,20);
+            #elif label_tstring.Contains("M1700") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1700_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1720,1700,1740);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,90,75,96);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
 
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #elif label_tstring.Contains("M1800") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1800_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1820,1800,1840);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,90,75,100);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
 
-            elif label_tstring.Contains("M2400") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M2400_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2420,2400,2440);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,115,100,125);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #elif label_tstring.Contains("M1900") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M1900_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1920,1900,1940);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,95,80,115);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
 
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #elif label_tstring.Contains("M2000") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M2000_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2020,2000,2040);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,100,80,115);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
 
-            elif label_tstring.Contains("M2500") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M2500_W") :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2520,2500,2540);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,125,90,145);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #elif label_tstring.Contains("M2100") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M2100_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2120,2100,2140);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,105,85,115);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
 
-            elif label_tstring.Contains("M1000_W150") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1020,970,1070);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,150,130,175);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.5,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.5,3.5);
+            #elif label_tstring.Contains("M2200") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M2200_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2220,2200,2250);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,115,75,140);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
 
-            elif label_tstring.Contains("M1000_W300") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1020,970,1070);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 300,50 ,800);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.5,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.5,3.5);
+            #elif label_tstring.Contains("M2300") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M2300_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2320,2300,2340);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,115,95,120);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 15.,0.2,30);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,15.,0.2,20);
 
-            elif label_tstring.Contains("M1000_W50") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1020,970,1070);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,50,25,1000);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.5,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.5,3.5);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
 
-            elif label_tstring.Contains("M1500_W75") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500,1000,2000);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 75,50 ,250);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+            #elif label_tstring.Contains("M2400") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M2400_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2420,2400,2440);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,115,100,125);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
 
-            elif label_tstring.Contains("M1500_W225") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500,1000,2000);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 225,150 ,450);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
 
-            elif label_tstring.Contains("M1500_W450") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500,1000,2000);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 450,400 ,700);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+            #elif label_tstring.Contains("M2500") and label_tstring.Contains("BulkG_WW") and not label_tstring.Contains("M2500_W") :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2520,2500,2540);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,125,90,145);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.);
 
-            elif label_tstring.Contains("M2100_W105") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100,1500,2500);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 105,90 ,300);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+            #elif label_tstring.Contains("M1000_W150") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1020,970,1070);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,150,130,175);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.5,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.5,3.5);
 
-            elif label_tstring.Contains("M2100_W315") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100,1500,2500);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 315,250 ,600);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+            #elif label_tstring.Contains("M1000_W300") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1020,970,1070);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 300,50 ,800);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.5,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.5,3.5);
 
-            elif label_tstring.Contains("M2100_W630") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100,2000,2200);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 630,500, 900);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+            #elif label_tstring.Contains("M1000_W50") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1020,970,1070);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,50,25,1000);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.5,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.5,3.5);
 
-            else :
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,700,550,2500);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 50,20 ,120);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+            #elif label_tstring.Contains("M1500_W75") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500,1000,2000);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 75,50 ,250);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+
+            #elif label_tstring.Contains("M1500_W225") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500,1000,2000);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 225,150 ,450);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+
+            #elif label_tstring.Contains("M1500_W450") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500,1000,2000);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 450,400 ,700);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+
+            #elif label_tstring.Contains("M2100_W105") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100,1500,2500);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 105,90 ,300);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+
+            #elif label_tstring.Contains("M2100_W315") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100,1500,2500);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 315,250 ,600);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+
+            #elif label_tstring.Contains("M2100_W630") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100,2000,2200);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 630,500, 900);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+
+            #else :
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,700,550,2500);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 50,20 ,120);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
+
+            rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,700,550,2500);
+            rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 50,20 ,120);
+            rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,35);
+            rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.,0.5,6.);
+            rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3,0.5,6.);
 
 
             rrv_mean_scale_p1 = RooRealVar("CMS_sig_p1_jes","CMS_sig_p1_jes",0);
             rrv_mean_scale_p1.setConstant(kTRUE);
             if self.categoryLabel == "mu" :             
                 rrv_mean_scale_p2 = RooRealVar("CMS_sig_p1_scale_m","CMS_sig_p1_scale_m",0);
-             rrv_mean_scale_p2.setConstant(kTRUE);
-         elif self.categoryLabel == "el" :
-             rrv_mean_scale_p2 = RooRealVar("CMS_sig_p1_scale_e","CMS_sig_p1_scale_e",0);
-             rrv_mean_scale_p2.setConstant(kTRUE);
-         elif self.categoryLabel == "em":
-             rrv_mean_scale_p2 = RooRealVar("CMS_sig_p1_scale_em","CMS_sig_p1_scale_em",0);
-             rrv_mean_scale_p2.setConstant(kTRUE);
+                rrv_mean_scale_p2.setConstant(kTRUE);
+            elif self.categoryLabel == "el" :
+                rrv_mean_scale_p2 = RooRealVar("CMS_sig_p1_scale_e","CMS_sig_p1_scale_e",0);
+                rrv_mean_scale_p2.setConstant(kTRUE);
+            elif self.categoryLabel == "em":
+                rrv_mean_scale_p2 = RooRealVar("CMS_sig_p1_scale_em","CMS_sig_p1_scale_em",0);
+                rrv_mean_scale_p2.setConstant(kTRUE);
 
 
             rrv_mean_scale_X1 = RooRealVar("rrv_mean_shift_scale_lep"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_shift_scale_lep"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,float(self.mean_signal_uncertainty_lep_scale));
@@ -1372,13 +2218,13 @@ class doFit_wj_and_wlvj:
 
             if self.categoryLabel == "mu":
                 rrv_sigma_scale_p1 = RooRealVar("CMS_sig_p2_scale_m","CMS_sig_p2_scale_m",0);
-             rrv_sigma_scale_p1.setConstant(kTRUE);
-         elif self.categoryLabel == "el":
-             rrv_sigma_scale_p1 = RooRealVar("CMS_sig_p2_scale_e","CMS_sig_p2_scale_e",0);
-             rrv_sigma_scale_p1.setConstant(kTRUE);
-         elif self.categoryLabel == "em":
-             rrv_sigma_scale_p1 = RooRealVar("CMS_sig_p2_scale_em","CMS_sig_p2_scale_em",0);
-             rrv_sigma_scale_p1.setConstant(kTRUE);
+                rrv_sigma_scale_p1.setConstant(kTRUE);
+            elif self.categoryLabel == "el":
+                rrv_sigma_scale_p1 = RooRealVar("CMS_sig_p2_scale_e","CMS_sig_p2_scale_e",0);
+                rrv_sigma_scale_p1.setConstant(kTRUE);
+            elif self.categoryLabel == "em":
+                rrv_sigma_scale_p1 = RooRealVar("CMS_sig_p2_scale_em","CMS_sig_p2_scale_em",0);
+                rrv_sigma_scale_p1.setConstant(kTRUE);
 
             rrv_sigma_scale_p2 = RooRealVar("CMS_sig_p2_jer","CMS_sig_p2_jer",0);
             rrv_sigma_scale_p3 = RooRealVar("CMS_sig_p2_jes","CMS_sig_p2_jes",0);
@@ -1402,95 +2248,104 @@ class doFit_wj_and_wlvj:
             label_tstring=TString(label);
             print "########### Double CB x BW for Bulk graviton width ############"
 
-            if label_tstring.Contains("M1000_W50") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB   = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0,-100,100);
-                    rrv_sigma_CB  = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,55,0,200);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,10.,0.01,45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.2,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.2,3.5);
-                    rrv_mean_BW   = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1000);
-                    rrv_width_BW  = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,50);
+            #if label_tstring.Contains("M1000_W50") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB   = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0,-100,100);
+            #        rrv_sigma_CB  = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,55,0,200);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,10.,0.01,45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.2,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.2,3.5);
+            #        rrv_mean_BW   = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1000);
+            #        rrv_width_BW  = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,50);
 
-            elif label_tstring.Contains("M1000_W150") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0,-100,100);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,55,0,200);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,10.,0.01,45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.5,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.5,3.5);
-                    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1000);
-                    rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,150);
+            #elif label_tstring.Contains("M1000_W150") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0,-100,100);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,55,0,200);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,10.,0.01,45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.5,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.5,3.5);
+            #        rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1000);
+            #        rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,150);
 
-            elif label_tstring.Contains("M1000_W300") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0,-100,100);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,55,0,200);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,10.,0.01,45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.5,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.5,3.5);
-                    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1000);
-                    rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,300);
+            #elif label_tstring.Contains("M1000_W300") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0,-100,100);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,55,0,200);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,10.,0.01,45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.5,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,35);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.5,3.5);
+            #        rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1000);
+            #        rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,300);
 
-            elif label_tstring.Contains("M1500_W75") and label_tstring.Contains("BulkG_WW"): 
-                rrv_mean_CB   = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0,-100,100);
-                    rrv_sigma_CB  = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,75,0,200);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,10.,0.01,45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.2,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,45);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.2,3.5);
-                    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500);
-                    rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,75);
+            #elif label_tstring.Contains("M1500_W75") and label_tstring.Contains("BulkG_WW"): 
+            #    rrv_mean_CB   = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0,-100,100);
+            #        rrv_sigma_CB  = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,75,0,200);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,10.,0.01,45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.2,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,45);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.2,3.5);
+            #        rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500);
+            #        rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,75);
 
-            elif label_tstring.Contains("M1500_W225") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB   = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0,-100,100);
-                    rrv_sigma_CB  = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,75,0,200);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,10.,0.01,45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.2,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,45);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.2,3.5);
-                    rrv_mean_BW   = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500);
-                    rrv_width_BW  = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,225);
+            #elif label_tstring.Contains("M1500_W225") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB   = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0,-100,100);
+            #        rrv_sigma_CB  = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,75,0,200);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,10.,0.01,45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.2,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,45);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.2,3.5);
+            #        rrv_mean_BW   = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500);
+            #        rrv_width_BW  = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,225);
 
-            elif label_tstring.Contains("M1500_W450") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB   = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0,-100,100);
-                    rrv_sigma_CB  = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,75,0,200);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,10.,0.01,45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.2,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,45);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.2,3.5);
-                    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500);
-                    rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,450);
+            #elif label_tstring.Contains("M1500_W450") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB   = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0,-100,100);
+            #        rrv_sigma_CB  = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,75,0,200);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,10.,0.01,45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.4,0.2,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,45);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.,0.2,3.5);
+            #        rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1500);
+            #        rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,450);
 
-            elif label_tstring.Contains("M2100_W105") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0.,-100,100);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,90,20,250);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01, 45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,45);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
-                    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100);
-                    rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,105);
+            #elif label_tstring.Contains("M2100_W105") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0.,-100,100);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,90,20,250);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01, 45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,45);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
+            #        rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100);
+            #        rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,105);
 
-            elif label_tstring.Contains("M2100_W315") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0.,-100,100);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,90,20,250);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,45);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,45);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
-                    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100);
-                    rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,315);
+            #elif label_tstring.Contains("M2100_W315") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0.,-100,100);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,90,20,250);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 10.,0.01,45);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,45);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,1.5,0.5,3.5);
+            #        rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100);
+            #        rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,315);
 
-            elif label_tstring.Contains("M2100_W630") and label_tstring.Contains("BulkG_WW"):
-                rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0.,-100,100);
-                    rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,90,20,250);
-                    rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 20.,0.01,105);
-                    rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.5,0.5,50.5);
-                    rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,105);
-                    rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.5,0.5,50.5);
-                    rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100);
-                    rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,630);
+            #elif label_tstring.Contains("M2100_W630") and label_tstring.Contains("BulkG_WW"):
+            #    rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0.,-100,100);
+            #        rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,90,20,250);
+            #        rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 20.,0.01,105);
+            #        rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.5,0.5,50.5);
+            #        rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,105);
+            #        rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.5,0.5,50.5);
+            #        rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100);
+            #        rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,630);
+            rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,0.,-100,100);
+            rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_sigma_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,90,20,250);
+            rrv_n1_CB     = RooRealVar("rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label, 20.,0.01,105);
+            rrv_alpha2_CB = RooRealVar("rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.5,0.5,50.5);
+            rrv_n2_CB     = RooRealVar("rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_n2_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,20.,0.01,105);
+            rrv_alpha1_CB = RooRealVar("rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_alpha1_CB"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,3.5,0.5,50.5);
+            rrv_mean_BW  = RooRealVar("rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,2100);
+            rrv_width_BW = RooRealVar("rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_width_BW"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,630);
+
 
             ### fix the Breit-Wigner core to the generated one  
             rrv_mean_BW.setConstant(kTRUE);
@@ -1503,15 +2358,15 @@ class doFit_wj_and_wlvj:
 
             if self.categoryLabel == "mu" :  ### lep scale effect on the mean       
                 rrv_mean_scale_p2 = RooRealVar("CMS_sig_p1_scale_m","CMS_sig_p1_scale_m",0);
-             rrv_mean_scale_p2.setConstant(kTRUE);
+                rrv_mean_scale_p2.setConstant(kTRUE);
 
-         elif self.categoryLabel == "el" :
-             rrv_mean_scale_p2 = RooRealVar("CMS_sig_p1_scale_e","CMS_sig_p1_scale_e",0);
-             rrv_mean_scale_p2.setConstant(kTRUE);
+            elif self.categoryLabel == "el" :
+                rrv_mean_scale_p2 = RooRealVar("CMS_sig_p1_scale_e","CMS_sig_p1_scale_e",0);
+                rrv_mean_scale_p2.setConstant(kTRUE);
 
-         elif self.categoryLabel == "em":
-             rrv_mean_scale_p2 = RooRealVar("CMS_sig_p1_scale_em","CMS_sig_p1_scale_em",0);
-             rrv_mean_scale_p2.setConstant(kTRUE);
+            elif self.categoryLabel == "em":
+                rrv_mean_scale_p2 = RooRealVar("CMS_sig_p1_scale_em","CMS_sig_p1_scale_em",0);
+                rrv_mean_scale_p2.setConstant(kTRUE);
 
             ## set the uncertainty value in other two independent variables 
             rrv_mean_scale_X1 = RooRealVar("rrv_mean_shift_scale_lep"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,"rrv_mean_shift_scale_lep"+label+"_"+self.categoryLabel+"_"+self.wtagger_label,float(self.mean_signal_uncertainty_lep_scale));
@@ -1526,13 +2381,13 @@ class doFit_wj_and_wlvj:
             ### lepton scale effect on the resolution 
             if self.categoryLabel == "mu":
                 rrv_sigma_scale_p1 = RooRealVar("CMS_sig_p2_scale_m","CMS_sig_p2_scale_m",0);
-             rrv_sigma_scale_p1.setConstant(kTRUE);
-         elif self.categoryLabel == "el":
-             rrv_sigma_scale_p1 = RooRealVar("CMS_sig_p2_scale_e","CMS_sig_p2_scale_e",0);
-             rrv_sigma_scale_p1.setConstant(kTRUE);
-         elif self.categoryLabel == "em":
-             rrv_sigma_scale_p1 = RooRealVar("CMS_sig_p2_scale_em","CMS_sig_p2_scale_em",0);
-             rrv_sigma_scale_p1.setConstant(kTRUE);
+                rrv_sigma_scale_p1.setConstant(kTRUE);
+            elif self.categoryLabel == "el":
+                rrv_sigma_scale_p1 = RooRealVar("CMS_sig_p2_scale_e","CMS_sig_p2_scale_e",0);
+                rrv_sigma_scale_p1.setConstant(kTRUE);
+            elif self.categoryLabel == "em":
+                rrv_sigma_scale_p1 = RooRealVar("CMS_sig_p2_scale_em","CMS_sig_p2_scale_em",0);
+                rrv_sigma_scale_p1.setConstant(kTRUE);
 
             ### jes and jer effect on the resolution             
             rrv_sigma_scale_p2 = RooRealVar("CMS_sig_p2_jer","CMS_sig_p2_jer",0);
@@ -1568,10 +2423,10 @@ class doFit_wj_and_wlvj:
             else :
                 if self.categoryLabel == "el" :
                     rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.categoryLabel,"rrv_n_ExpN"+label+"_"+self.categoryLabel, 1e3, -1e2, 1e4);
-              elif self.wtagger_label == "LP" :
-                  rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.categoryLabel,"rrv_n_ExpN"+label+"_"+self.categoryLabel, 1e3, -1e2, 1e4);
-              else:
-                  rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.categoryLabel,"rrv_n_ExpN"+label+"_"+self.categoryLabel, 5e2, 0, 1e3);
+                elif self.wtagger_label == "LP" :
+                    rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.categoryLabel,"rrv_n_ExpN"+label+"_"+self.categoryLabel, 1e3, -1e2, 1e4);
+                else:
+                    rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label+"_"+self.categoryLabel,"rrv_n_ExpN"+label+"_"+self.categoryLabel, 5e2, 0, 1e3);
 
             model_pdf = ROOT.RooExpNPdf("model_pdf"+label+"_"+self.categoryLabel+mass_spectrum,"model_pdf"+label+"_"+self.categoryLabel+mass_spectrum,rrv_x,rrv_c_ExpN, rrv_n_ExpN);
 
@@ -1582,29 +2437,29 @@ class doFit_wj_and_wlvj:
             label_tstring=TString(label);
             if self.wtagger_label == "LP":
                 rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.categoryLabel,"rrv_s_ExpTail"+label+"_"+self.categoryLabel, 250,-1.e6,1e6);
-             rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 1e-1,-1.e-2,1e6);
-         else:
-             if self.categoryLabel == "el" :
-                 if ismc == 1 and label_tstring.Contains("lowersideband"):
-                     rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.categoryLabel,"rrv_s_ExpTail"+label+"_"+self.categoryLabel, 139,0.,355);
-                   rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 2e-2,-1.e-2,5.5e-2);                     
-               elif ismc == 1 and label_tstring.Contains("signalregion"):
-                   rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.categoryLabel,"rrv_s_ExpTail"+label+"_"+self.categoryLabel, 162,18,395);
-                   rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 1.6e-2,-1.e-2,5.5e-2);
-               elif ismc == 0 :  
-                   rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.categoryLabel,"rrv_s_ExpTail"+label+"_"+self.categoryLabel, 161,70,240);
-                     rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 8e-3,-1e-2,1.3e-1);
-
+                rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 1e-1,-1.e-2,1e6);
+            else:
+                if self.categoryLabel == "el" :
+                    if ismc == 1 and label_tstring.Contains("lowersideband"):
+                        rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.categoryLabel,"rrv_s_ExpTail"+label+"_"+self.categoryLabel, 139,0.,355);
+                        rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 2e-2,-1.e-2,5.5e-2);                     
+                    elif ismc == 1 and label_tstring.Contains("signalregion"):
+                        rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.categoryLabel,"rrv_s_ExpTail"+label+"_"+self.categoryLabel, 162,18,395);
+                        rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 1.6e-2,-1.e-2,5.5e-2);
+                    elif ismc == 0 :  
+                        rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.categoryLabel,"rrv_s_ExpTail"+label+"_"+self.categoryLabel, 161,70,240);
+                        rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 8e-3,-1e-2,1.3e-1);
+   
                 if self.categoryLabel == "mu" or self.categoryLabel == "em":
                     if ismc == 1 and label_tstring.Contains("lowersideband"):
                         rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.categoryLabel,"rrv_s_ExpTail"+label+"_"+self.categoryLabel, 99,10,255);
-                   rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 3e-2,-1e-2,7.5e-2);                        
-               elif ismc == 1 and label_tstring.Contains("signalregion"):
-                   rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.categoryLabel,"rrv_s_ExpTail"+label+"_"+self.categoryLabel, 110,20,242);
-                   rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 2.9e-2,-1e-2,7.5e-2);
-               elif ismc == 0 :  
-                   rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.categoryLabel,"rrv_s_ExpTail"+label+"_"+self.categoryLabel, 161,40,280);
-                     rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 8e-3,-1e-2,1.3e-1);    
+                        rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 3e-2,-1e-2,7.5e-2);                        
+                    elif ismc == 1 and label_tstring.Contains("signalregion"):
+                        rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.categoryLabel,"rrv_s_ExpTail"+label+"_"+self.categoryLabel, 110,20,242);
+                        rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 2.9e-2,-1e-2,7.5e-2);
+                    elif ismc == 0 :  
+                        rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label+"_"+self.categoryLabel,"rrv_s_ExpTail"+label+"_"+self.categoryLabel, 161,40,280);
+                        rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label+"_"+self.categoryLabel,"rrv_a_ExpTail"+label+"_"+self.categoryLabel, 8e-3,-1e-2,1.3e-1);    
 
             model_pdf     = ROOT.RooExpTailPdf("model_pdf"+label+"_"+self.categoryLabel+mass_spectrum,"model_pdf"+label+"_"+self.categoryLabel+mass_spectrum,rrv_x,rrv_s_ExpTail, rrv_a_ExpTail);
 
@@ -1975,13 +2830,15 @@ class doFit_wj_and_wlvj:
         ## Keys 
         if in_model_name == "Keys":
             print "########### Erf*Pow*Exp Pdf for Keys  ############"
-            rdataset = self.workspace4fit_.data("rdataset_%s_signalregion_mlvj"%(self.prime_signal_sample))
-            model_pdf = RooKeysPdf("model_pdf"+label+"_"+self.categoryLabel+mass_spectrum,"model_pdf"+label+"_"+self.categoryLabel+mass_spectrum, rrv_x,rdataset);
+            rdataset = self.workspace4fit_.data("rdataset4fit"+label+"_"+self.categoryLabel+"_mlvj");
+            rdataset.Print();
+            model_pdf = RooKeysPdf("model_pdf"+label+"_"+self.categoryLabel+mass_spectrum,"model_pdf"+label+"_"+self.categoryLabel+mass_spectrum, rrv_x, rdataset);
 
         ## return the pdf
         getattr(self.workspace4fit_,"import")(model_pdf)
         return self.workspace4fit_.pdf("model_pdf"+label+"_"+self.categoryLabel+mass_spectrum)
 
+'''
     ########### Gaussian contraint of a parameter of a pdf
     def addConstraint(self, rrv_x, x_mean, x_sigma, ConstraintsList):
         print "########### Add to Contraint List some parameters  ############"
@@ -2176,35 +3033,10 @@ class doFit_wj_and_wlvj:
             return datahist.createHistogram("histo_"+label,x, RooFit.Binning( nbin,x.getMin(),x.getMax()));
 
 
-    ### Define the Extended Pdf for and mJ fit giving: label, fit model name, list constraint and ismc
-    def make_Model(self, label, in_model_name, mass_spectrum="_mj", ConstraintsList=[], ismc_wjet=0, area_init_value=500):
-
-        ##### define an extended pdf from a standard Roofit One
-      print " "
-      print "###############################################"
-      print "## Make model : ",label," ",in_model_name,"##";
-      print "###############################################"
-      print " "
-
-      rrv_number = RooRealVar("rrv_number"+label+"_"+self.categoryLabel+mass_spectrum,"rrv_number"+label+"_"+self.categoryLabel+mass_spectrum,area_init_value,0.,1e7);
-      ## call the make RooAbsPdf method
-      model_pdf = self.make_Pdf(label,in_model_name,mass_spectrum,ConstraintsList,ismc_wjet)
-      print "######## Model Pdf ########"        
-      model_pdf.Print();
-
-      ## create the extended pdf
-      model = RooExtendPdf("model"+label+"_"+self.categoryLabel+mass_spectrum,"model"+label+"_"+self.categoryLabel+mass_spectrum, model_pdf, rrv_number );
-      print "######## Model Extended Pdf ########"        
-
-      #### put all the parameters ant the shape in the workspace
-      getattr(self.workspace4fit_,"import")(rrv_number)
-      getattr(self.workspace4fit_,"import")(model) 
-      self.workspace4fit_.pdf("model"+label+"_"+self.categoryLabel+mass_spectrum).Print();
-      ## return the total extended pdf
-      return self.workspace4fit_.pdf("model"+label+"_"+self.categoryLabel+mass_spectrum);
-
+'''
+'''
   ### Method for a single MC fit of the mj spectra giving: file name, label, model name
-    def fit_mj_single_MC(self,in_file_name, label, in_model_name, additioninformation=""):
+    def fit_obs_variable_SingleChannel(self,in_file_name, label, in_model_name, additioninformation=""):
 
         print "############### Fit mj single MC sample",in_file_name," ",label,"  ",in_model_name," ##################"
         ## import variable and dataset
@@ -2268,7 +3100,7 @@ class doFit_wj_and_wlvj:
             param=par.Next()
 
     ### Define the Extended Pdf for and mlvj fit giving: label, fit model name, list constraint, range to be fitted and do the decorrelation
-    def fit_mlvj_model_single_MC(self,in_file_name, label, in_range, mlvj_model, deco=0, show_constant_parameter=0, logy=0, ismc=0):
+    def fit_limit_variable_SingleChannel(self,in_file_name, label, in_range, mlvj_model, deco=0, show_constant_parameter=0, logy=0, ismc=0):
 
         print "############### Fit mlvj single MC sample ",in_file_name," ",label,"  ",mlvj_model,"  ",in_range," ##################"
         ## import variable and dataset
@@ -3140,714 +3972,6 @@ class doFit_wj_and_wlvj:
         self.workspace4fit_.var("rrv_number%s_signalregion_%s_mlvj"%(label,self.categoryLabel)).setConstant(kTRUE);
 
 
-    ##### Prepare the workspace for the limit and to store info to be printed in the datacard
-    def prepare_limit(self,mode, isTTbarFloating=0, isVVFloating=0, isSingleTFloating=0):
-        print "####################### prepare_limit for %s method ####################"%(mode);
-
-        getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_mass_lvj"));
-
-        ### whole number of events from the considered signal sample, WJets, VV, TTbar, SingleT -> couting
-        if TString(self.prime_signal_sample).Contains("BulkG_WW"):
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone("rate_BulkWW_for_counting"))
-        else:
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone("rate_%s_for_counting"%(self.prime_signal_sample)))
-
-        getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_WJets0_%s_mlvj"%(self.categoryLabel)).clone("rate_WJets_for_counting"))
-        getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_VV_%s_mlvj"%(self.categoryLabel)).clone("rate_VV_for_counting"))
-        getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_TTbar_%s_mlvj"%(self.categoryLabel)).clone("rate_TTbar_for_counting"))
-        getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_SingleT_%s_mlvj"%(self.categoryLabel)).clone("rate_SingleT_for_counting"))
-
-        ### number of signal, Wjets, VV, TTbar and SingleT --> unbin
-        if TString(self.prime_signal_sample).Contains("BulkG_WW"):
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_%s_signalregion_%s_mlvj"%(self.prime_signal_sample, self.categoryLabel)).clone("rate_BulkWW_for_unbin"));
-        else:
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_%s_signalregion_%s_mlvj"%(self.prime_signal_sample, self.categoryLabel)).clone("rate_%s_for_unbin"%(self.prime_signal_sample)));
-
-        getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_WJets0_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_WJets_for_unbin"));
-        getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_VV_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_VV_for_unbin"));
-        getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_TTbar_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_TTbar_for_unbin"));
-        getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_SingleT_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_SingleT_for_unbin"));
-
-        ### Set the error properly -> taking into account lumi, Vtagger and theoretical uncertainty on XS -> for VV, TTbar and SingleT
-        self.workspace4limit_.var("rate_VV_for_unbin").setError(self.workspace4limit_.var("rate_VV_for_unbin").getVal()*TMath.Sqrt( self.lumi_uncertainty*self.lumi_uncertainty + self.rrv_wtagger_eff_reweight_forV.getError()/self.rrv_wtagger_eff_reweight_forV.getVal()*self.rrv_wtagger_eff_reweight_forV.getError()/self.rrv_wtagger_eff_reweight_forV.getVal() +self.XS_VV_uncertainty*self.XS_VV_uncertainty ) );
-        self.workspace4limit_.var("rate_SingleT_for_unbin").setError(self.workspace4limit_.var("rate_SingleT_for_unbin").getVal()*TMath.Sqrt( self.lumi_uncertainty*self.lumi_uncertainty + self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal()*self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal() +self.XS_SingleT_uncertainty*self.XS_SingleT_uncertainty ) );
-        self.workspace4limit_.var("rate_TTbar_for_unbin").setError(self.workspace4limit_.var("rate_TTbar_for_unbin").getVal()*TMath.Sqrt( self.lumi_uncertainty*self.lumi_uncertainty + self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal()*self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal() ))
-
-        ### Get the dataset for data into the signal region
-        getattr(self.workspace4limit_,"import")(self.workspace4fit_.data("rdataset_data_signalregion_%s_mlvj"%(self.categoryLabel)).Clone("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label)))
-        ### Take the corrected pdf from the alpha method for the WJets
-        if mode=="sideband_correction_method1":
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_WJets0_signalregion_%s_after_correct_mlvj"%(self.categoryLabel)).clone("WJets_%s_%s"%(self.categoryLabel, self.wtagger_label)));
-
-        if isTTbarFloating:
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_TTbar_signalregion_%s_mlvj_Deco_TTbar_signalregion_%s_%s_mlvj"%(self.categoryLabel, self.categoryLabel, self.wtagger_label)).clone("TTbar_%s_%s"%(self.categoryLabel,self.wtagger_label)))
-        else :
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_TTbar_signalregion_%s_mlvj"%(self.categoryLabel, self.categoryLabel, self.wtagger_label)).clone("TTbar_%s_%s"%(self.categoryLabel,self.wtagger_label)))
-
-        if isSingleTFloating :     
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_SingleT_signalregion_%s_mlvj_Deco_SingleT_signalregion_%s_%s_mlvj"%(self.categoryLabel, self.categoryLabel, self.wtagger_label)).clone("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label)))
-        else :
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_SingleT_signalregion_%s_mlvj"%(self.categoryLabel)).clone("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label)))
-
-        if isVVFloating :    
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_VV_signalregion_%s_mlvj_Deco_VV_signalregion_%s_%s_mlvj"%(self.categoryLabel, self.categoryLabel, self.wtagger_label)).clone("VV_%s_%s"%(self.categoryLabel,self.wtagger_label)))
-        else:
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_VV_signalregion_%s_mlvj"%(self.categoryLabel)).clone("VV_%s_%s"%(self.categoryLabel,self.wtagger_label)))
-
-        if TString(self.prime_signal_sample).Contains("BulkG_WW"):
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_%s_signalregion_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone("BulkWW_%s_%s"%(self.categoryLabel, self.wtagger_label)))
-        else:    
-            getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_%s_signalregion_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone(self.prime_signal_sample+"_%s_%s"%(self.categoryLabel, self.wtagger_label)))
-
-        ### Fix all the Pdf parameters 
-        rrv_x = self.workspace4limit_.var("rrv_mass_lvj");
-
-        self.fix_Pdf(self.workspace4limit_.pdf("TTbar_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooArgSet(rrv_x) );            
-        self.fix_Pdf(self.workspace4limit_.pdf("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooArgSet(rrv_x));
-        self.fix_Pdf(self.workspace4limit_.pdf("VV_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooArgSet(rrv_x));
-        self.fix_Pdf(self.workspace4limit_.pdf("WJets_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooArgSet(rrv_x));
-
-        if TString(self.prime_signal_sample).Contains("BulkG_WW"):            
-            self.fix_Pdf(self.workspace4limit_.pdf("BulkWW_%s_%s"%(self.categoryLabel, self.wtagger_label)), RooArgSet(rrv_x));
-        else:    
-            self.fix_Pdf(self.workspace4limit_.pdf(self.prime_signal_sample+"_%s_%s"%(self.categoryLabel, self.wtagger_label)), RooArgSet(rrv_x));
-
-        print " ############## Workspace for limit ";
-        parameters_workspace = self.workspace4limit_.allVars();
-        par = parameters_workspace.createIterator();
-        par.Reset();
-        param = par.Next()
-        while (param):
-            param.Print();
-            param=par.Next()
-
-        params_list = [];
-        ### main modality for the alpha function method
-        if mode=="sideband_correction_method1":
-
-            if self.MODEL_4_mlvj=="ErfExp_v1" or self.MODEL_4_mlvj=="ErfPow_v1" or self.MODEL_4_mlvj=="2Exp" :
-                ### uncertainty inflation on the Wjets shape from fitting data in lowersideband
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-                ### Add to the parameter list
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)));
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)));
-
-                ### Do the same for alpha paramter
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig5"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                ### Add to the parameter list
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0sim_%s_%s_mlvj_eig5"%(self.categoryLabel, self.wtagger_label)))
-
-                ### Do the same for the TTbar
-                if isTTbarFloating !=0 :
-                    self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
-                 self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
-                 self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
-
-                 params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
-                 params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
-                 params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)));
-
-
-            if self.MODEL_4_mlvj=="ErfPow2_v1" or self.MODEL_4_mlvj=="ErfPowExp_v1" :
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)));
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)));
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)));
-
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig5"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig6"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig7"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig5"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig6"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig7"%(self.categoryLabel, self.wtagger_label)))
-
-
-                if isTTbarFloating !=0 :
-                    self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
-                 self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
-                 self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
-                 self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
-
-                 params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
-                 params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
-                 params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)));
-                 params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)));
-
-
-            if self.MODEL_4_mlvj=="Exp" or self.MODEL_4_mlvj=="Pow" :
-
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
-
-
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)))
-
-                if isTTbarFloating !=0 :
-                    self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
-                 params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
-
-            if self.MODEL_4_mlvj=="ExpN" or self.MODEL_4_mlvj=="ExpTail" or self.MODEL_4_mlvj=="Pow2" :
-
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-                self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_WJets0);
-
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)));
-
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-                self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_alpha);
-
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)))
-                params_list.append(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)))
-
-
-                ### TTbar use exp
-                if isTTbarFloating !=0:
-                    print "##################### TTbar will float in the limit procedure + final plot ######################";
-                    self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_TTbar);
-                    params_list.append(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
-
-                ### VV use ExpTail:
-                if isVVFloating !=0:
-                    print "##################### VV will float in the limit procedure + final plot ######################";
-                  self.workspace4limit_.var("Deco_VV_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_VV);
-                  self.workspace4limit_.var("Deco_VV_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_VV);
-                  params_list.append(self.workspace4limit_.var("Deco_VV_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
-                  params_list.append(self.workspace4limit_.var("Deco_VV_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
-
-                ### SingleT use Exp:
-                if isSingleTFloating !=0:
-                    print "##################### SingleT will float in the limit procedure + final plot ######################";
-                  self.workspace4limit_.var("Deco_SingleT_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)).setError(self.shape_para_error_SingleT);
-                  params_list.append(self.workspace4limit_.var("Deco_SingleT_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
-
-
-        #### add signal shape parameters' uncertainty -> increase the uncertainty on the mean and the sigma since we are using a CB or a Double CB or a BWxDB or BWxCB
-        if self.workspace4limit_.var("rrv_mean_CB_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)):
-
-            self.workspace4limit_.var( "rrv_mean_shift_scale_lep_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.mean_signal_uncertainty_lep_scale);
-           self.workspace4limit_.var( "rrv_mean_shift_scale_jes_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.mean_signal_uncertainty_jet_scale);
-           self.workspace4limit_.var( "rrv_sigma_shift_lep_scale_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.sigma_signal_uncertainty_lep_scale);
-           self.workspace4limit_.var( "rrv_sigma_shift_jes_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.sigma_signal_uncertainty_jet_scale);
-           self.workspace4limit_.var( "rrv_sigma_shift_res_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.sigma_signal_uncertainty_jet_res);
-
-           if self.categoryLabel == "mu":
-               self.workspace4limit_.var("CMS_sig_p1_scale_m").setError(1);
-            self.workspace4limit_.var("CMS_sig_p2_scale_m").setError(1);
-            params_list.append(self.workspace4limit_.var("CMS_sig_p1_scale_m"));
-            params_list.append(self.workspace4limit_.var("CMS_sig_p2_scale_m"));
-        elif self.categoryLabel == "el":
-            self.workspace4limit_.var("CMS_sig_p1_scale_e").setError(1);
-            self.workspace4limit_.var("CMS_sig_p2_scale_e").setError(1);
-            params_list.append(self.workspace4limit_.var("CMS_sig_p1_scale_e"));
-            params_list.append(self.workspace4limit_.var("CMS_sig_p2_scale_e"));
-        elif self.categoryLabel == "em":
-            self.workspace4limit_.var("CMS_sig_p1_scale_em").setError(1);
-            self.workspace4limit_.var("CMS_sig_p2_scale_em").setError(1);
-            params_list.append(self.workspace4limit_.var("CMS_sig_p1_scale_em"));
-            params_list.append(self.workspace4limit_.var("CMS_sig_p2_scale_em"));
-
-           self.workspace4limit_.var("CMS_sig_p1_jes").setError(1);
-           self.workspace4limit_.var("CMS_sig_p2_jes").setError(1);
-           self.workspace4limit_.var("CMS_sig_p2_jer").setError(1);
-
-           params_list.append(self.workspace4limit_.var("CMS_sig_p1_jes"));
-           params_list.append(self.workspace4limit_.var("CMS_sig_p2_jes"));
-           params_list.append(self.workspace4limit_.var("CMS_sig_p2_jer"));
-
-
-        ### calculate the shape uncertainty for cut-and-counting
-        self.rrv_counting_uncertainty_from_shape_uncertainty = RooRealVar("rrv_counting_uncertainty_from_shape_uncertainty_%s"%(self.categoryLabel),"rrv_counting_uncertainty_from_shape_uncertainty_%s"%(self.categoryLabel),0);
-        self.rrv_counting_uncertainty_from_shape_uncertainty.setError( Calc_error("WJets_%s_%s"%(self.categoryLabel,self.wtagger_label), "rrv_mass_lvj" ,self.FloatingParams,self.workspace4limit_,"signalregion") );
-        self.rrv_counting_uncertainty_from_shape_uncertainty.Print();
-
-        print " param list ",params_list ;
-
-        ### Print the datacard for unbin and couting analysis
-        self.print_limit_datacard("unbin",params_list);
-        self.print_limit_datacard("counting");
-
-        if mode=="sideband_correction_method1":
-            if self.MODEL_4_mlvj=="ErfExp_v1" or self.MODEL_4_mlvj=="ErfPow_v1" or self.MODEL_4_mlvj=="2Exp" :
-
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)) );
-
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig5"%(self.categoryLabel, self.wtagger_label)) );
-
-                if isTTbarFloating!=0:
-                    self.FloatingParams.add(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)) );
-                 self.FloatingParams.add(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)) );
-                 self.FloatingParams.add(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)) );
-
-          if self.MODEL_4_mlvj=="ErfPow2_v1" or self.MODEL_4_mlvj=="ErfPowExp_v1" :
-
-              self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)) );
-
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig4"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig5"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig6"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig7"%(self.categoryLabel, self.wtagger_label)) );
-
-                if isTTbarFloating!=0:
-                    self.FloatingParams.add(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
-                 self.FloatingParams.add(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
-                 self.FloatingParams.add(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)));
-                 self.FloatingParams.add(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)));
-
-          if self.MODEL_4_mlvj=="Exp" or self.MODEL_4_mlvj=="Pow" :
-
-              self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)) );
-
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)) );
-
-                if isTTbarFloating!=0:
-                    self.FloatingParams.add(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel,self.wtagger_label)));
-
-
-          if self.MODEL_4_mlvj=="ExpN" or self.MODEL_4_mlvj=="ExpTail" or self.MODEL_4_mlvj=="Pow2" :
-
-              self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_lowersideband_from_fitting_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)) );
-
-
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig2"%(self.categoryLabel, self.wtagger_label)) );
-                self.FloatingParams.add(self.workspace4limit_.var("Deco_WJets0_sim_%s_%s_mlvj_eig3"%(self.categoryLabel, self.wtagger_label)) );
-
-                if isTTbarFloating!=0:
-                    self.FloatingParams.add(self.workspace4limit_.var("Deco_TTbar_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel,self.wtagger_label)));
-
-                if isVVFloating!=0:     
-                    self.FloatingParams.add(self.workspace4limit_.var("Deco_VV_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel, self.wtagger_label)));
-                  self.FloatingParams.add(self.workspace4limit_.var("Deco_VV_signalregion_%s_%s_mlvj_eig1"%(self.categoryLabel, self.wtagger_label)));
-
-                if isSingleTFloating!=0:
-                    self.FloatingParams.add(self.workspace4limit_.var("Deco_SingleT_signalregion_%s_%s_mlvj_eig0"%(self.categoryLabel,self.wtagger_label)));
-
-
-          if self.workspace4limit_.var("rrv_mean_CB_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)):
-
-              if self.categoryLabel == "mu":
-                  self.FloatingParams.add(self.workspace4limit_.var("CMS_sig_p1_scale_m"));
-              self.FloatingParams.add(self.workspace4limit_.var("CMS_sig_p2_scale_m"));
-          elif self.categoryLabel == "el":
-              self.FloatingParams.add(self.workspace4limit_.var("CMS_sig_p1_scale_e"));
-              self.FloatingParams.add(self.workspace4limit_.var("CMS_sig_p2_scale_e"));
-          elif self.categoryLabel == "em":
-              self.FloatingParams.add(self.workspace4limit_.var("CMS_sig_p1_scale_em"));
-              self.FloatingParams.add(self.workspace4limit_.var("CMS_sig_p2_scale_em"));
-
-
-             self.FloatingParams.add(self.workspace4limit_.var("CMS_sig_p1_jes"));
-             self.FloatingParams.add(self.workspace4limit_.var("CMS_sig_p2_jes"));
-             self.FloatingParams.add(self.workspace4limit_.var("CMS_sig_p2_jer"));
-
-        ### Add the floating list to the combiner --> the pdf which are not fixed are floating by default
-        getattr(self.workspace4limit_,"import")(self.FloatingParams);
-
-        ### Save the workspace
-        self.save_workspace_to_file();
-
-
-
-    #### Method used in order to save the workspace in a output root file
-    def save_workspace_to_file(self):
-        self.workspace4limit_.writeToFile(self.file_rlt_root);
-        self.file_out.close()
-
-
-    #### Method used to print the general format of the datacard for both counting and unbinned analysis
-    def print_limit_datacard(self, mode, params_list=[]):
-        print "############## print_limit_datacard for %s ################"%(mode)
-        if not (mode == "unbin" or mode == "counting"):
-            print "print_limit_datacard use wrong mode: %s"%(mode);raw_input("ENTER");
-
-        ### open the datacard    
-        datacard_out = open(getattr(self,"file_datacard_%s"%(mode)),"w");
-
-        ### start to print inside 
-        datacard_out.write( "imax 1" )
-        datacard_out.write( "\njmax 4" )
-        datacard_out.write( "\nkmax *" )
-        datacard_out.write( "\n--------------- ")
-
-        if mode == "unbin":
-            fnOnly = ntpath.basename(self.file_rlt_root) ## workspace for limit --> output file for the workspace
-            if TString(self.prime_signal_sample).Contains("BulkG_WW"):
-                datacard_out.write("\nshapes BulkWW  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
-            else:
-                datacard_out.write("\nshapes %s  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.prime_signal_sample,self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
-
-            datacard_out.write("\nshapes WJets  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
-            datacard_out.write("\nshapes TTbar  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
-            datacard_out.write("\nshapes SingleT   CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
-            datacard_out.write("\nshapes VV     CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
-            datacard_out.write("\nshapes data_obs   CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
-            datacard_out.write( "\n--------------- ")
-
-        datacard_out.write( "\nbin CMS_%s1J%s "%(self.categoryLabel,self.wtagger_label));    
-        if mode == "unbin":
-            datacard_out.write( "\nobservation %0.2f "%(self.workspace4limit_.data("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label)).sumEntries()) )
-        if mode == "counting":
-            datacard_out.write( "\nobservation %0.2f "%(self.workspace4limit_.var("observation_for_counting").getVal()) )
-
-        datacard_out.write( "\n------------------------------" );
-
-        datacard_out.write( "\nbin CMS_%s1J%s CMS_%s1J%s CMS_%s1J%s CMS_%s1J%s CMS_%s1J%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label));
-
-        if TString(self.prime_signal_sample).Contains("BulkG_WW"):
-            datacard_out.write( "\nprocess BulkWW WJets TTbar SingleT VV"); ## just one signal sample
-        else:
-            datacard_out.write( "\nprocess %s WJets TTbar SingleT VV "%(self.prime_signal_sample)); ## just one signal sample
-
-        datacard_out.write( "\nprocess -1 1 2 3 4" );
-
-        ### rates for the different process
-        if mode == "unbin":
-            if TString(self.prime_signal_sample).Contains("BulkG_WW"):                    
-                datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f "%(self.workspace4limit_.var("rate_BulkWW_for_unbin").getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_unbin").getVal(), self.workspace4limit_.var("rate_TTbar_for_unbin").getVal(), self.workspace4limit_.var("rate_SingleT_for_unbin").getVal(), self.workspace4limit_.var("rate_VV_for_unbin").getVal() ) )
-            else:
-                datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f "%(self.workspace4limit_.var("rate_%s_for_unbin"%(self.prime_signal_sample)).getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_unbin").getVal(), self.workspace4limit_.var("rate_TTbar_for_unbin").getVal(), self.workspace4limit_.var("rate_SingleT_for_unbin").getVal(), self.workspace4limit_.var("rate_VV_for_unbin").getVal() ) )
-
-        if mode == "counting":
-            if TString(self.prime_signal_sample).Contains("BulkG_WW"):                    
-                datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f"%(self.workspace4limit_.var("rate_BulkWW_for_counting").getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_counting").getVal(), self.workspace4limit_.var("rate_TTbar_for_counting").getVal(), self.workspace4limit_.var("rate_SingleT_for_counting").getVal(), self.workspace4limit_.var("rate_VV_for_counting").getVal() ) )
-            else : 
-                datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f"%(self.workspace4limit_.var("rate_%s_for_counting"%(self.prime_signal_sample)).getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_counting").getVal(), self.workspace4limit_.var("rate_TTbar_for_counting").getVal(), self.workspace4limit_.var("rate_SingleT_for_counting").getVal(), self.workspace4limit_.var("rate_VV_for_counting").getVal() ) )
-
-        datacard_out.write( "\n-------------------------------- " )
-
-        ### luminosity nouisance
-        datacard_out.write( "\nlumi_8TeV lnN %0.3f - %0.3f %0.3f %0.3f"%(1.+self.lumi_uncertainty, 1.+self.lumi_uncertainty,1.+self.lumi_uncertainty,1.+self.lumi_uncertainty) )
-
-        ### SingleT XS  nouisance in boosted regime
-        datacard_out.write( "\nCMS_XS_SingleT lnN - - - %0.3f -"%(1+self.XS_SingleT_uncertainty) )
-
-        ### VV XS  nouisance in boosted regime
-        datacard_out.write( "\nCMS_XS_VV lnN - - - - %0.3f"%(1+self.XS_VV_uncertainty) )
-
-        ### WJets Normalization from data fit -> data driven
-        if self.number_WJets_insideband >0:
-            datacard_out.write( "\nCMS_WJ_norm gmN %0.3f %0.3f - - -"%(self.number_WJets_insideband, getattr(self, "datadriven_alpha_WJets_%s"%(mode)) ) )
-        else:
-            datacard_out.write( "\nCMS_WJ_norm_%s_%s lnN - %0.3f - - -"%(self.categoryLabel, self.wtagger_label, 1+ self.workspace4limit_.var("rate_WJets_for_unbin").getError()/self.workspace4limit_.var("rate_WJets_for_unbin").getVal() ) );
-
-        ### Top normalization due to SF in the ttbar CR
-        datacard_out.write( "\nCMS_Top_norm_%s_%s lnN - - %0.3f %0.3f -"%(self.categoryLabel, self.wtagger_label, 1+self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal(), 1+self.rrv_wtagger_eff_reweight_forT.getError()/self.rrv_wtagger_eff_reweight_forT.getVal() ) );
-
-        ### V-Tagger SF nouisance
-        if self.wtagger_label == "HP":
-            datacard_out.write( "\nCMS_eff_vtag_tau21_sf lnN %0.3f/%0.3f - - - %0.3f/%0.3f"%(1+self.rrv_wtagger_eff_reweight_forV.getError(),1-self.rrv_wtagger_eff_reweight_forV.getError(), 1+self.rrv_wtagger_eff_reweight_forV.getError(),1-self.rrv_wtagger_eff_reweight_forV.getError()));
-        elif self.wtagger_label == "LP":
-            datacard_out.write( "\nCMS_eff_vtag_tau21_sf lnN %0.3f/%0.3f - - - %0.3f/%0.3f"%(1-self.rrv_wtagger_eff_reweight_forV.getError(),1+self.rrv_wtagger_eff_reweight_forV.getError(), 1-self.rrv_wtagger_eff_reweight_forV.getError(),1+self.rrv_wtagger_eff_reweight_forV.getError()));
-        else:
-            datacard_out.write( "\nCMS_eff_vtag_tau21_sf lnN %0.3f/%0.3f - - - %0.3f/%0.3f"%(1+self.rrv_wtagger_eff_reweight_forV.getError(),1-self.rrv_wtagger_eff_reweight_forV.getError(), 1+self.rrv_wtagger_eff_reweight_forV.getError(),1-self.rrv_wtagger_eff_reweight_forV.getError()));
-
-        ### btag scale factor on the MC background
-#        datacard_out.write( "\nCMS_btagger lnN - - %0.3f %0.3f %0.3f"%(self.categoryLabel, 1+self.btag_scale_uncertainty, 1+self.btag_scale_uncertainty, 1+self.btag_scale_uncertainty ) );
-
-        ### btag scale factor on the MC background
-        datacard_out.write( "\n#CMS_eff_vtag_model lnN %0.3f - - - %0.3f"%(1+self.eff_vtag_model,1+self.eff_vtag_model) );
-
-        ### jet Mass effect only if available -> shapes changing due to the jet mass uncertainty (JEC for CA8/AK7) -> affects also WJets
-        if ( self.workspace4fit_.var("rrv_number_WJets0_massup_in_mj_signalregion_from_fitting_%s"%(self.categoryLabel)) and
-                self.workspace4fit_.var("rrv_number_WJets0_massdn_in_mj_signalregion_from_fitting_%s"%(self.categoryLabel)) and
-                self.workspace4fit_.var("rrv_number_dataset_signalregion_SingleT_massup_%s_mj"%(self.categoryLabel)) and
-                self.workspace4fit_.var("rrv_number_dataset_signalregion_SingleT_massdown_%s_mj"%(self.categoryLabel)) and
-                self.workspace4fit_.var("rrv_number_dataset_signalregion_TTbar_massup_%s_mj"%(self.categoryLabel)) and
-                self.workspace4fit_.var("rrv_number_dataset_signalregion_TTbar_massdn_%s_mj"%(self.categoryLabel)) and
-                self.workspace4fit_.var("rrv_number_dataset_signalregion_VV_massup_%s_mj"%(self.categoryLabel)) and
-                self.workspace4fit_.var("rrv_number_dataset_signalregion_VV_massdn_%s_mj"%(self.categoryLabel))) :
-
-            datacard_out.write( "\nJetMass_%s lnN - %0.3f %0.3f %0.3f %0.3f"%(self.categoryLabel, 1+self.WJets_normlization_uncertainty_from_jet_mass, 1+self.TTbar_normlization_uncertainty_from_jet_mass, 1+self.SingleT_normlization_uncertainty_from_jet_mass, 1+self.VV_normlization_uncertainty_from_jet_mass ) )
-
-        if self.categoryLabel == "mu":
-            self.channel_short = "m"
-        elif self.categoryLabel =="el":
-            self.channel_short = "e"
-        elif self.categoryLabel =="em":
-            self.channel_short = "em"
-
-        ### trigger efficiency
-        datacard_out.write( "\nCMS_trigger_%s lnN %0.3f - %0.3f %0.3f %0.3f"%(self.channel_short, 1+self.lep_trigger_uncertainty,1+self.lep_trigger_uncertainty,1+self.lep_trigger_uncertainty,1+self.lep_trigger_uncertainty ) );
-
-        ### Lepton SF
-        datacard_out.write( "\nCMS_eff_%s lnN %0.3f - %0.3f %0.3f %0.3f"%(self.channel_short, 1+self.lep_eff_uncertainty, 1+self.lep_eff_uncertainty,1+self.lep_eff_uncertainty,1+self.lep_eff_uncertainty ) );
-
-        ############ Evaluated just for signal, in principle also on all the backgrounds with the same topology
-
-        ### Lepton Energy scale
-        datacard_out.write( "\nCMS_scale_%s lnN %0.3f - - - -"%(self.channel_short,1+self.signal_lepton_energy_scale_uncertainty));
-
-        ### Lepton Energy Resolution
-        datacard_out.write( "\nCMS_res_%s lnN %0.3f - - - -"%(self.channel_short,1+self.signal_lepton_energy_res_uncertainty));
-
-        ### CA8 jet energy scale
-        datacard_out.write( "\nCMS_scale_j  lnN %0.3f - - - -"%(1+self.signal_jet_energy_scale_uncertainty));
-
-        ### CA8 jet energy resolution
-        datacard_out.write( "\nCMS_res_j  lnN %0.3f - - - -"%(1+self.signal_jet_energy_res_uncertainty));
-
-        ### btag on the signal
-        datacard_out.write( "\nCMS_btag_eff lnN %0.3f - - - -"%(1+self.signal_btag_uncertainty));
-
-
-        ### print shapes parameter to be taken int account
-        if mode == "unbin":
-            for ipar in params_list:
-                print "Name %s",ipar.GetName();
-              if TString(ipar.GetName()).Contains("Deco_TTbar_signalregion"):
-                  datacard_out.write( "\n%s param %0.1f %0.1f "%( ipar.GetName(), ipar.getVal(), ipar.getError() ) )
-              else:
-                  datacard_out.write( "\n%s param %0.1f %0.1f "%( ipar.GetName(), ipar.getVal(), ipar.getError() ) )
-        if mode == "counting":
-            datacard_out.write( "\nShape_%s_%s lnN - - %0.3f - - -"%(self.categoryLabel, self.wtagger_label, 1+self.rrv_counting_uncertainty_from_shape_uncertainty.getError()))
-
-
-    #### Read the final workspace and produce the latest plots 
-    def read_workspace(self, logy=0):
-
-        ### Taket the workspace for limits  
-        file = TFile(self.file_rlt_root) ;
-        workspace = file.Get("workspace4limit_") ;
-        workspace.Print()
-
-        ### iterate on the workspace element parameters
-        print "----------- Parameter Workspace -------------";
-        parameters_workspace = workspace.allVars();
-        par = parameters_workspace.createIterator();
-        par.Reset();
-        param = par.Next()
-        while (param):
-            param.Print();
-            param=par.Next()
-        print "---------------------------------------------";
-
-        workspace.data("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label)).Print()
-
-        print "----------- Pdf in the Workspace -------------";
-        pdfs_workspace = workspace.allPdfs();
-        par = pdfs_workspace.createIterator();
-        par.Reset();
-        param=par.Next()
-        while (param):
-            param.Print();
-            param = par.Next()
-        print "----------------------------------------------";
-
-        rrv_x = workspace.var("rrv_mass_lvj")
-        data_obs = workspace.data("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label));
-        if TString(self.prime_signal_sample).Contains("BulkG_WW"):
-            model_pdf_signal = workspace.pdf("BulkWW_%s_%s"%(self.categoryLabel,self.wtagger_label));
-        else:
-            model_pdf_signal = workspace.pdf("%s_%s_%s"%(self.prime_signal_sample,self.categoryLabel,self.wtagger_label));
-
-        model_pdf_WJets  = workspace.pdf("WJets_%s_%s"%(self.categoryLabel,self.wtagger_label));
-        model_pdf_VV     = workspace.pdf("VV_%s_%s"%(self.categoryLabel,self.wtagger_label));
-        model_pdf_TTbar  = workspace.pdf("TTbar_%s_%s"%(self.categoryLabel,self.wtagger_label));
-        model_pdf_SingleT   = workspace.pdf("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label));
-
-        model_pdf_signal.Print();
-        model_pdf_WJets.Print();
-        model_pdf_VV.Print();
-        model_pdf_TTbar.Print();
-        model_pdf_SingleT.Print();
-
-        if TString(self.prime_signal_sample).Contains("BulkG_WW"):
-            rrv_number_signal = workspace.var("rate_BulkWW_for_unbin");
-        else:
-            rrv_number_signal = workspace.var("rate_%s_for_unbin"%(self.prime_signal_sample));
-
-
-        rrv_number_WJets  = workspace.var("rate_WJets_for_unbin");
-        rrv_number_VV     = workspace.var("rate_VV_for_unbin");
-        rrv_number_TTbar  = workspace.var("rate_TTbar_for_unbin");
-        rrv_number_SingleT   = workspace.var("rate_SingleT_for_unbin");
-
-        rrv_number_signal.Print();
-        rrv_number_WJets.Print();
-        rrv_number_VV.Print();
-        rrv_number_TTbar.Print();
-        rrv_number_SingleT.Print();
-
-        #### Prepare the final plot starting from total background 
-        rrv_number_Total_background_MC = RooRealVar("rrv_number_Total_background_MC","rrv_number_Total_background_MC",
-                rrv_number_WJets.getVal()+
-                rrv_number_VV.getVal()+
-                rrv_number_TTbar.getVal()+
-                rrv_number_SingleT.getVal());
-
-        rrv_number_Total_background_MC.setError(TMath.Sqrt(
-            rrv_number_WJets.getError()* rrv_number_WJets.getError()+
-            rrv_number_VV.getError()* rrv_number_VV.getError()+
-            rrv_number_TTbar.getError()* rrv_number_TTbar.getError()+
-            rrv_number_SingleT.getError() *rrv_number_SingleT.getError()
-            ));
-
-        #### Total pdf 
-        model_Total_background_MC = RooAddPdf("model_Total_background_MC","model_Total_background_MC",RooArgList(model_pdf_WJets,model_pdf_VV,model_pdf_TTbar,model_pdf_SingleT),RooArgList(rrv_number_WJets,rrv_number_VV,rrv_number_TTbar,rrv_number_SingleT));
-
-        scale_number_signal = rrv_number_signal.getVal()/data_obs.sumEntries()
-        #### scale factor in order to scale MC to data in the final plot -> in order to avoid the normalization to data which is done by default in rooFit
-        scale_number_Total_background_MC = rrv_number_Total_background_MC.getVal()/data_obs.sumEntries()
-
-        #### create the frame
-        mplot = rrv_x.frame(RooFit.Title("check_workspace"), RooFit.Bins(int(rrv_x.getBins()/self.BinWidth_narrow_factor)));
-        data_obs.plotOn(mplot , RooFit.Name("data_invisible"), RooFit.MarkerSize(1.5), RooFit.DataError(RooAbsData.Poisson), RooFit.XErrorSize(0), RooFit.MarkerColor(0), RooFit.LineColor(0));
-
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("WJets"), RooFit.Components("WJets_%s_%s,VV_%s_%s,TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["WJets"]), RooFit.LineColor(kBlack), RooFit.VLines());
-
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("VV"), RooFit.Components("VV_%s_%s,TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["VV"]), RooFit.LineColor(kBlack), RooFit.VLines());
-
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("TTbar"), RooFit.Components("TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["TTbar"]), RooFit.LineColor(kBlack), RooFit.VLines());
-
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("SingleT"), RooFit.Components("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["SingleT"]), RooFit.LineColor(kBlack), RooFit.VLines());
-
-        #solid line
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("WJets_line_invisible"), RooFit.Components("WJets_%s_%s,VV_%s_%s,TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
-
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("VV_line_invisible"), RooFit.Components("VV_%s_%s,TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
-
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("TTbar_line_invisible"), RooFit.Components("TTbar_%s_%s,SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
-
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Name("SingleT_line_invisible"), RooFit.Components("SingleT_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.VLines());
-
-        ### signal scale to be visible in the plots
-        label_tstring = TString(self.prime_signal_sample);
-        if label_tstring.Contains("600") and (not label_tstring.Contains("1600")):
-            signal_scale=20*self.xs_rescale;
-        elif label_tstring.Contains("700") and (not label_tstring.Contains("1700")):
-            signal_scale=20*self.xs_rescale;
-        elif label_tstring.Contains("800") and (not label_tstring.Contains("1800")):
-            signal_scale=20*self.xs_rescale;
-        else:
-            signal_scale=25*self.xs_rescale;
-
-        model_pdf_signal.plotOn(mplot,RooFit.Normalization(scale_number_signal*signal_scale),RooFit.Name("%s #times %s"%(self.prime_signal_sample, signal_scale)),RooFit.DrawOption("L"), RooFit.LineColor(self.color_palet["Signal"]), RooFit.LineStyle(2), RooFit.VLines());
-
-        #### plot the observed data using poissonian error bar
-        self.getData_PoissonInterval(data_obs,mplot);
-
-        model_Total_background_MC.plotOn(mplot,RooFit.Normalization(scale_number_Total_background_MC),RooFit.Invisible());
-
-        mplot_pull=self.get_pull(rrv_x,mplot);
-
-        ### Plot the list of floating parameters and the uncertainty band is draw taking into account this floating list defined in the prepare_limit
-        draw_error_band(model_Total_background_MC, rrv_x.GetName(), rrv_number_Total_background_MC,self.FloatingParams,workspace ,mplot,self.color_palet["Uncertainty"],"F");
-
-        mplot.Print();
-        self.plot_legend = self.legend4Plot(mplot,0,1,-0.01,-0.05,0.11,0.);
-        self.plot_legend.SetTextSize(0.036);
-        mplot.addObject(self.plot_legend);
-
-        mplot.GetYaxis().SetRangeUser(1e-2,mplot.GetMaximum()*1.2);
-
-
-        parameters_list = RooArgList();
-        self.draw_canvas_with_pull( mplot, mplot_pull,parameters_list,"plots_%s_%s_%s_%s/m_lvj_fitting/"%(self.additioninformation, self.categoryLabel,self.PS_model,self.wtagger_label),"check_workspace_for_limit","",0,1);
-
-        if workspace.var("rrv_num_floatparameter_in_last_fitting"):
-            self.nPar_float_in_fitTo = int(workspace.var("rrv_num_floatparameter_in_last_fitting").getVal());
-        else:
-            self.nPar_float_in_fitTo = self.FloatingParams.getSize();
-        nBinX = mplot.GetNbinsX();
-        ndof  = nBinX-self.nPar_float_in_fitTo;
-        print "nPar=%s, chiSquare=%s/%s"%(self.nPar_float_in_fitTo, mplot.chiSquare( self.nPar_float_in_fitTo )*ndof, ndof );
-
-    ### in order to get the pull
-    def get_pull(self, rrv_x, mplot_orig):
-
-        print "############### draw the pull plot ########################"
-        hpull = mplot_orig.pullHist();
-        x = ROOT.Double(0.); y = ROOT.Double(0) ;
-        for ipoint in range(0,hpull.GetN()):
-            hpull.GetPoint(ipoint,x,y);
-          if(y == 0):
-              hpull.SetPoint(ipoint,x,10)
-
-        mplot_pull = rrv_x.frame(RooFit.Title("Pull Distribution"), RooFit.Bins(int(rrv_x.getBins()/self.BinWidth_narrow_factor)));
-        medianLine = TLine(rrv_x.getMin(),0.,rrv_x.getMax(),0); medianLine.SetLineWidth(2); medianLine.SetLineColor(kRed);
-        mplot_pull.addObject(medianLine);
-        mplot_pull.addPlotable(hpull,"P");
-        mplot_pull.SetTitle("");
-        mplot_pull.GetXaxis().SetTitle("");
-        mplot_pull.GetYaxis().SetRangeUser(-5,5);
-        mplot_pull.GetYaxis().SetTitleSize(0.10);
-        mplot_pull.GetYaxis().SetLabelSize(0.10);
-        mplot_pull.GetXaxis().SetTitleSize(0.10);
-        mplot_pull.GetXaxis().SetLabelSize(0.10);
-        mplot_pull.GetYaxis().SetTitleOffset(0.40);
-        mplot_pull.GetYaxis().SetTitle("#frac{Data-Fit}{#sigma_{data}}");
-        mplot_pull.GetYaxis().CenterTitle();
-
-        return mplot_pull;
-
     def getData_PoissonInterval(self,data_obs,mplot):
         rrv_x = self.workspace4fit_.var("rrv_mass_lvj");
         datahist   = data_obs.binnedClone(data_obs.GetName()+"_binnedClone",data_obs.GetName()+"_binnedClone");
@@ -3870,35 +3994,6 @@ class doFit_wj_and_wlvj:
 
         mplot.addPlotable(data_plot,"PE");
 
-
-    #### in order to make the banner on the plots
-    def banner4Plot(self, iswithpull=0):
-        print "############### draw the banner ########################"
-
-      if iswithpull:
-          if self.categoryLabel=="el":
-              #        banner = TLatex(0.3,0.96,("CMS Preliminary, %.1f fb^{-1} at #sqrt{s} = 8 TeV, W#rightarrow e #nu "%(self.GetLumi())));
-        banner = TLatex(0.18,0.96,"CMS                                             L = 19.7 fb^{-1} at #sqrt{s} = 8 TeV");
-    elif self.categoryLabel=="mu":
-        #        banner = TLatex(0.3,0.96,("CMS Preliminary, %.1f fb^{-1} at #sqrt{s} = 8 TeV, W#rightarrow #mu #nu "%(self.GetLumi())));
-        banner = TLatex(0.18,0.96,"CMS                                             L = 19.7 fb^{-1} at #sqrt{s} = 8 TeV");
-    elif self.categoryLabel=="em":
-        #        banner = TLatex(0.3,0.96,("CMS Preliminary, %.1f fb^{-1} at #sqrt{s} = 8 TeV, W#rightarrow #mu,e #nu "%(self.GetLumi())));
-        banner = TLatex(0.18,0.96,"CMS                                             L = 19.7 fb^{-1} at #sqrt{s} = 8 TeV");
-       banner.SetNDC(); banner.SetTextSize(0.041);
-   else:
-       if self.categoryLabel=="el":
-           #        banner = TLatex(0.22,0.96,("CMS Preliminary, %.1f fb^{-1} at #sqrt{s} = 8 TeV, W#rightarrow e #nu "%(self.GetLumi())));
-        banner = TLatex(0.18,0.96,"CMS                                         L = 19.7 fb^{-1} at #sqrt{s} = 8 TeV");
-       if self.categoryLabel=="mu":
-           #        banner = TLatex(0.22,0.96,("CMS Preliminary, %.1f fb^{-1} at #sqrt{s} = 8 TeV, W#rightarrow #mu #nu "%(self.GetLumi())));
-        banner = TLatex(0.18,0.96,"CMS                                         L = 19.7 fb^{-1} at #sqrt{s} = 8 TeV");
-       if self.categoryLabel=="em":
-           #        banner = TLatex(0.22,0.96,("CMS Preliminary, %.1f fb^{-1} at #sqrt{s} = 8 TeV, W#rightarrow #mu,e #nu "%(self.GetLumi())));
-        banner = TLatex(0.18,0.96,"CM                                          L = 19.7 fb^{-1} at #sqrt{s} = 8 TeV");
-       banner.SetNDC(); banner.SetTextSize(0.033);
-
-      return banner;
 
   ### in order to make the plot_legend
     def legend4Plot(self, plot, left=1, isFill=1, x_offset_low=0., y_offset_low=0., x_offset_high =0., y_offset_high =0., TwoCoulum =1.):
@@ -4065,177 +4160,6 @@ elif TString(objName).Contains("Bulk"):
             theLeg.AddEntry(objName_signal_graviton, TString(objNameLeg_signal_graviton).Data() ,"L");
         return theLeg;
 
-    #### draw canvas with plots with pull
-    def draw_canvas_with_pull(self, mplot, mplot_pull,parameters_list,in_directory, in_file_name, in_model_name="", show_constant_parameter=0, logy=0):# mplot + pull
-
-        print "############### draw the canvas with pull ########################"
-        mplot.GetXaxis().SetTitleOffset(1.1);
-        mplot.GetYaxis().SetTitleOffset(1.3);
-        mplot.GetXaxis().SetTitleSize(0.055);
-        mplot.GetYaxis().SetTitleSize(0.055);
-        mplot.GetXaxis().SetLabelSize(0.045);
-        mplot.GetYaxis().SetLabelSize(0.045);
-        mplot_pull.GetXaxis().SetLabelSize(0.14);
-        mplot_pull.GetYaxis().SetLabelSize(0.14);
-        mplot_pull.GetYaxis().SetTitleSize(0.15);
-        mplot_pull.GetYaxis().SetNdivisions(205);
-
-
-        cMassFit = TCanvas("cMassFit","cMassFit", 600,600);
-        # if parameters_list is empty, don't draw pad3
-        par_first=parameters_list.createIterator();
-        par_first.Reset();
-        param_first=par_first.Next()
-        doParameterPlot = 0 ;
-        if param_first and doParameterPlot != 0:
-            pad1=TPad("pad1","pad1",0.,0. ,0.8,0.24);
-         pad2=TPad("pad2","pad2",0.,0.24,0.8,1. );
-         pad3=TPad("pad3","pad3",0.8,0.,1,1);
-         pad1.Draw();
-         pad2.Draw();
-         pad3.Draw();
-     else:
-         pad1=TPad("pad1","pad1",0.,0. ,0.99,0.24);
-         pad2=TPad("pad2","pad2",0.,0.24,0.99,1. );
-         pad1.Draw();
-         pad2.Draw();
-
-        pad2.cd();
-        mplot.Draw();
-        banner = self.banner4Plot(1);
-        banner.Draw();
-
-        pad1.cd();
-        mplot_pull.Draw();
-
-        if param_first and doParameterPlot != 0:
-
-            pad3.cd();
-            latex=TLatex();
-            latex.SetTextSize(0.1);
-            par=parameters_list.createIterator();
-            par.Reset();
-            param=par.Next()
-            i=0;
-            while param:
-                if (not param.isConstant() ) or show_constant_parameter:
-                    param.Print();
-                    icolor=1;#if a paramenter is constant, color is 2
-                    if param.isConstant(): icolor=2
-                    latex.DrawLatex(0,0.9-i*0.04,"#color[%s]{%s}"%(icolor,param.GetName()) );
-                    latex.DrawLatex(0,0.9-i*0.04-0.02," #color[%s]{%4.3e +/- %2.1e}"%(icolor,param.getVal(),param.getError()) );
-                    i=i+1;
-                param=par.Next();
-
-        ## create the directory where store the plots
-        Directory = TString(in_directory+self.prime_signal_sample+"_%02d_%02d/"%(options.cprime,options.BRnew));
-        if not Directory.EndsWith("/"):Directory = Directory.Append("/");
-        if not os.path.isdir(Directory.Data()):
-            os.system("mkdir -p "+Directory.Data());
-
-        rlt_file = TString(Directory.Data()+in_file_name);
-        if rlt_file.EndsWith(".root"):
-            TString(in_model_name).ReplaceAll(".root","");
-            rlt_file.ReplaceAll(".root","_"+in_model_name+"_with_pull.png");
-        else:
-            TString(in_model_name).ReplaceAll(".root","");
-            rlt_file.ReplaceAll(".root","");
-            rlt_file=rlt_file.Append("_"+in_model_name+"_with_pull.png");
-
-        cMassFit.SaveAs(rlt_file.Data());
-
-        rlt_file.ReplaceAll(".png",".pdf");
-        cMassFit.SaveAs(rlt_file.Data());
-
-        rlt_file.ReplaceAll(".pdf",".root");
-        cMassFit.SaveAs(rlt_file.Data());
-
-        string_file_name = TString(in_file_name);
-        if string_file_name.EndsWith(".root"):
-            string_file_name.ReplaceAll(".root","_"+in_model_name);
-        else:
-            string_file_name.ReplaceAll(".root","");
-            string_file_name.Append("_"+in_model_name);
-
-        if logy:
-            mplot.GetYaxis().SetRangeUser(1e-3,mplot.GetMaximum()*200);
-            pad2.SetLogy() ;
-            pad2.Update();
-            cMassFit.Update();
-            rlt_file.ReplaceAll(".root","_log.root");
-            cMassFit.SaveAs(rlt_file.Data());
-            rlt_file.ReplaceAll(".root",".pdf");
-            cMassFit.SaveAs(rlt_file.Data());
-            rlt_file.ReplaceAll(".pdf",".png");
-            cMassFit.SaveAs(rlt_file.Data());
-
-        self.draw_canvas(mplot,in_directory,string_file_name.Data(),0,logy,1);
-
-    #### jusr drawing canvas with no pull
-    def draw_canvas(self, in_obj,in_directory, in_file_name, is_range=0, logy=0, frompull=0):
-
-        print "############### draw the canvas without pull ########################"
-        cMassFit = TCanvas("cMassFit","cMassFit", 600,600);
-
-        if frompull and logy :
-            in_obj.GetYaxis().SetRangeUser(1e-2,in_obj.GetMaximum()/200)
-        elif not frompull and logy :
-            in_obj.GetYaxis().SetRangeUser(0.00001,in_obj.GetMaximum())
-
-
-        if is_range:
-            h2=TH2D("h2","",100,400,1400,4,0.00001,4);
-            h2.Draw();
-            in_obj.Draw("same")
-        else :
-            in_obj.Draw()
-
-        in_obj.GetXaxis().SetTitleSize(0.045);
-        in_obj.GetXaxis().SetTitleOffset(1.15);
-        in_obj.GetXaxis().SetLabelSize(0.04);
-
-        in_obj.GetYaxis().SetTitleSize(0.055);
-        in_obj.GetYaxis().SetTitleOffset(1.40);
-        in_obj.GetYaxis().SetLabelSize(0.04);
-
-        self.plot_legend.SetTextSize(0.031); 
-
-        banner = self.banner4Plot();
-        banner.Draw();
-
-        Directory=TString(in_directory+self.prime_signal_sample+"_%02d_%02d/"%(options.cprime,options.BRnew));
-        if not Directory.EndsWith("/"):Directory=Directory.Append("/");
-        if not os.path.isdir(Directory.Data()):
-            os.system("mkdir -p "+Directory.Data());
-
-        rlt_file=TString(Directory.Data()+in_file_name);
-        if rlt_file.EndsWith(".root"):
-            rlt_file.ReplaceAll(".root","_rlt_without_pull_and_paramters.png");
-        else:
-            rlt_file.ReplaceAll(".root","");
-            rlt_file = rlt_file.Append(".png");
-
-        cMassFit.SaveAs(rlt_file.Data());
-
-        rlt_file.ReplaceAll(".png",".pdf");
-        cMassFit.SaveAs(rlt_file.Data());
-
-        rlt_file.ReplaceAll(".pdf",".root");
-        cMassFit.SaveAs(rlt_file.Data());
-
-        if logy:
-            in_obj.GetYaxis().SetRangeUser(1e-3,in_obj.GetMaximum()*200);
-            cMassFit.SetLogy() ;
-            cMassFit.Update();
-            rlt_file.ReplaceAll(".root","_log.root");
-            cMassFit.SaveAs(rlt_file.Data());
-            rlt_file.ReplaceAll(".root",".pdf");
-            cMassFit.SaveAs(rlt_file.Data());
-            rlt_file.ReplaceAll(".pdf",".png");
-            cMassFit.SaveAs(rlt_file.Data());
-
-
-
 
     ##### Define the steps to fit WJets MC in the mj and mlvj spectra
     def fit_WJets(self):
@@ -4246,17 +4170,17 @@ elif TString(objName).Contains("Bulk"):
 
         ### Fit in mj depends on the mlvj lower limit -> fitting the turn on at low mass or not
         if self.MODEL_4_mlvj=="ErfPowExp_v1" or self.MODEL_4_mlvj=="ErfPow2_v1" or self.MODEL_4_mlvj=="ErfExp_v1" :
-            self.fit_mj_single_MC(self.file_WJets0_mc,"_WJets0","ErfExp");
-            self.fit_mj_single_MC(self.file_WJets0_mc,"_WJets01","User1");
+            self.fit_obs_variable_SingleChannel(self.file_WJets0_mc,"_WJets0","ErfExp");
+            self.fit_obs_variable_SingleChannel(self.file_WJets0_mc,"_WJets01","User1");
         else:
-            self.fit_mj_single_MC(self.file_WJets0_mc,"_WJets0","User1");
-            self.fit_mj_single_MC(self.file_WJets0_mc,"_WJets01","ErfExp");
+            self.fit_obs_variable_SingleChannel(self.file_WJets0_mc,"_WJets0","User1");
+            self.fit_obs_variable_SingleChannel(self.file_WJets0_mc,"_WJets01","ErfExp");
 
         #### Fit the mlvj in lowersideband, signal region using two different model as done in the mj
-        self.fit_mlvj_model_single_MC(self.file_WJets0_mc,"_WJets0","_lowersideband",self.MODEL_4_mlvj, 0, 0, 1, 1);
-        self.fit_mlvj_model_single_MC(self.file_WJets0_mc,"_WJets0","_signalregion",self.MODEL_4_mlvj, 0, 0, 1, 1);
-        self.fit_mlvj_model_single_MC(self.file_WJets0_mc,"_WJets01","_lowersideband",self.MODEL_4_mlvj_alter, 0, 0, 1, 1);
-        self.fit_mlvj_model_single_MC(self.file_WJets0_mc,"_WJets01","_signalregion",self.MODEL_4_mlvj_alter, 0, 0, 1, 1);
+        self.fit_limit_variable_SingleChannel(self.file_WJets0_mc,"_WJets0","_lowersideband",self.MODEL_4_mlvj, 0, 0, 1, 1);
+        self.fit_limit_variable_SingleChannel(self.file_WJets0_mc,"_WJets0","_signalregion",self.MODEL_4_mlvj, 0, 0, 1, 1);
+        self.fit_limit_variable_SingleChannel(self.file_WJets0_mc,"_WJets01","_lowersideband",self.MODEL_4_mlvj_alter, 0, 0, 1, 1);
+        self.fit_limit_variable_SingleChannel(self.file_WJets0_mc,"_WJets01","_signalregion",self.MODEL_4_mlvj_alter, 0, 0, 1, 1);
 
         print "________________________________________________________________________"
 
@@ -4270,22 +4194,22 @@ elif TString(objName).Contains("Bulk"):
         ### fitting shape as a function of the mlvj region -> signal mass
         if self.MODEL_4_mlvj=="ErfPowExp_v1" or self.MODEL_4_mlvj=="ErfPow2_v1" or self.MODEL_4_mlvj=="ErfExp_v1":
             if self.wtagger_label=="LP":
-                self.fit_mj_single_MC(self.file_VV_mc,"_VV","ExpGaus");
+                self.fit_obs_variable_SingleChannel(self.file_VV_mc,"_VV","ExpGaus");
             else:
-                self.fit_mj_single_MC(self.file_VV_mc,"_VV","2_2Gaus");
+                self.fit_obs_variable_SingleChannel(self.file_VV_mc,"_VV","2_2Gaus");
         else:
             if self.wtagger_label=="LP":
-                self.fit_mj_single_MC(self.file_VV_mc,"_VV","ExpGaus");
+                self.fit_obs_variable_SingleChannel(self.file_VV_mc,"_VV","ExpGaus");
             else:
-                self.fit_mj_single_MC(self.file_VV_mc,"_VV","2_2Gaus");
+                self.fit_obs_variable_SingleChannel(self.file_VV_mc,"_VV","2_2Gaus");
 
         if self.MODEL_4_mlvj=="ErfPowExp_v1" or self.MODEL_4_mlvj=="ErfPow2_v1" or self.MODEL_4_mlvj=="ErfExp_v1":
-            self.fit_mlvj_model_single_MC(self.file_VV_mc,"_VV","_lowersideband","ErfExp_v1", 0, 0, 1);
-            self.fit_mlvj_model_single_MC(self.file_VV_mc,"_VV","_signalregion",self.MODEL_4_mlvj, 1, 0, 1);
+            self.fit_limit_variable_SingleChannel(self.file_VV_mc,"_VV","_lowersideband","ErfExp_v1", 0, 0, 1);
+            self.fit_limit_variable_SingleChannel(self.file_VV_mc,"_VV","_signalregion",self.MODEL_4_mlvj, 1, 0, 1);
 
         else:
-            self.fit_mlvj_model_single_MC(self.file_VV_mc,"_VV","_lowersideband","Exp", 0, 0, 1);
-            self.fit_mlvj_model_single_MC(self.file_VV_mc,"_VV","_signalregion",self.MODEL_4_mlvj, 1, 0, 1);
+            self.fit_limit_variable_SingleChannel(self.file_VV_mc,"_VV","_lowersideband","Exp", 0, 0, 1);
+            self.fit_limit_variable_SingleChannel(self.file_VV_mc,"_VV","_signalregion",self.MODEL_4_mlvj, 1, 0, 1);
 
         print "________________________________________________________________________"
 
@@ -4296,19 +4220,19 @@ elif TString(objName).Contains("Bulk"):
         self.get_mj_and_mlvj_dataset(self.file_TTbar_mc,"_TTbar", "mJJNoKinFit")# to get the shape of m_lvj
 
         if self.MODEL_4_mlvj=="ErfPowExp_v1" or self.MODEL_4_mlvj=="ErfPow2_v1" or self.MODEL_4_mlvj=="ErfExp_v1":
-            if self.wtagger_label== "LP": self.fit_mj_single_MC(self.file_TTbar_mc,"_TTbar","ExpGaus");
-            else:                         self.fit_mj_single_MC(self.file_TTbar_mc,"_TTbar","2Gaus_ErfExp");
+            if self.wtagger_label== "LP": self.fit_obs_variable_SingleChannel(self.file_TTbar_mc,"_TTbar","ExpGaus");
+            else:                         self.fit_obs_variable_SingleChannel(self.file_TTbar_mc,"_TTbar","2Gaus_ErfExp");
         else:
-            if self.wtagger_label== "LP" : self.fit_mj_single_MC(self.file_TTbar_mc,"_TTbar","ExpGaus");
-            else:                          self.fit_mj_single_MC(self.file_TTbar_mc,"_TTbar","2Gaus_ErfExp");
+            if self.wtagger_label== "LP" : self.fit_obs_variable_SingleChannel(self.file_TTbar_mc,"_TTbar","ExpGaus");
+            else:                          self.fit_obs_variable_SingleChannel(self.file_TTbar_mc,"_TTbar","2Gaus_ErfExp");
 
         if self.MODEL_4_mlvj=="ErfPowExp_v1" or self.MODEL_4_mlvj=="ErfPow2_v1" or self.MODEL_4_mlvj=="ErfExp_v1" :
-            self.fit_mlvj_model_single_MC(self.file_TTbar_mc,"_TTbar","_lowersideband","ErfExp_v1", 0, 0, 1);
-            self.fit_mlvj_model_single_MC(self.file_TTbar_mc,"_TTbar","_signalregion",self.MODEL_4_mlvj,1, 0, 1);
+            self.fit_limit_variable_SingleChannel(self.file_TTbar_mc,"_TTbar","_lowersideband","ErfExp_v1", 0, 0, 1);
+            self.fit_limit_variable_SingleChannel(self.file_TTbar_mc,"_TTbar","_signalregion",self.MODEL_4_mlvj,1, 0, 1);
 
         else:
-            self.fit_mlvj_model_single_MC(self.file_TTbar_mc,"_TTbar","_lowersideband","Exp");
-            self.fit_mlvj_model_single_MC(self.file_TTbar_mc,"_TTbar","_signalregion","Exp",1, 0, 1);
+            self.fit_limit_variable_SingleChannel(self.file_TTbar_mc,"_TTbar","_lowersideband","Exp");
+            self.fit_limit_variable_SingleChannel(self.file_TTbar_mc,"_TTbar","_signalregion","Exp",1, 0, 1);
 
         print "________________________________________________________________________"
 
@@ -4317,14 +4241,14 @@ elif TString(objName).Contains("Bulk"):
     def fit_SingleT(self):
         print "############################## fit_SingleT  #################################"
         self.get_mj_and_mlvj_dataset(self.file_SingleT_mc,"_SingleT", "mJJNoKinFit")
-        self.fit_mj_single_MC(self.file_SingleT_mc,"_SingleT","ExpGaus");
+        self.fit_obs_variable_SingleChannel(self.file_SingleT_mc,"_SingleT","ExpGaus");
 
         if self.MODEL_4_mlvj=="ErfPowExp_v1" or self.MODEL_4_mlvj=="ErfPow2_v1" or self.MODEL_4_mlvj=="ErfExp_v1":
-            self.fit_mlvj_model_single_MC(self.file_SingleT_mc,"_SingleT","_lowersideband","ErfExp_v1", 0, 0, 1);
-            self.fit_mlvj_model_single_MC(self.file_SingleT_mc,"_SingleT","_signalregion","ErfExp_v1", 1, 0, 1);
+            self.fit_limit_variable_SingleChannel(self.file_SingleT_mc,"_SingleT","_lowersideband","ErfExp_v1", 0, 0, 1);
+            self.fit_limit_variable_SingleChannel(self.file_SingleT_mc,"_SingleT","_signalregion","ErfExp_v1", 1, 0, 1);
         else:
-            self.fit_mlvj_model_single_MC(self.file_SingleT_mc,"_SingleT","_lowersideband","Exp", 0, 0, 1);
-            self.fit_mlvj_model_single_MC(self.file_SingleT_mc,"_SingleT","_signalregion","Exp", 1, 0, 1);
+            self.fit_limit_variable_SingleChannel(self.file_SingleT_mc,"_SingleT","_lowersideband","Exp", 0, 0, 1);
+            self.fit_limit_variable_SingleChannel(self.file_SingleT_mc,"_SingleT","_signalregion","Exp", 1, 0, 1);
 
         print "________________________________________________________________________"
 
