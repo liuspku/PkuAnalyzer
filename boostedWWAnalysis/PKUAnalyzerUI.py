@@ -83,7 +83,7 @@ def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample
             ("SingleT", 7  , file_Directory+"treeEDBR_SingleTop_xww.root"                    , ( 0, "Keys") ), #bkg
             ("VV"     , 4  , file_Directory+"treeEDBR_VV_xww.root"                           , ( 0, "Keys") )  #bkg
             );
-    #category: mu/el, HighPurity/LowPurity
+    #category: mu/el, HighPurity/LowPurity;   
     category_ID_label={
             0: "elLP",
             1: "elHP",
@@ -99,7 +99,7 @@ def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample
             "limit_variable": "mZZ",
             "limit_variable_full_range_min": in_mlvj_min,
             "limit_variable_full_range_max": in_mlvj_max,
-            "limit_variable_BinWidth": 50.,
+            "limit_variable_BinWidth": 150.,
             "limit_variable_signalregion_range_min": in_mlvj_signalregion_min,
             "limit_variable_signalregion_range_max": in_mlvj_signalregion_max,
             "limit_variable_fit_model": fit_model,
@@ -119,8 +119,8 @@ def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample
             "additioninformation": options.additioninformation
             };
     boostedW_fitter=doFit_wj_and_wlvj( analyzer_config);
-    boostedW_fitter.analysis();
-    #boostedW_fitter.analysis_sideband_correction_method1_without_shape_and_psmodel_systermatic()
+    #boostedW_fitter.analysis();
+    boostedW_fitter.read_workspace(1);
 
 '''
 ### run full analysis
