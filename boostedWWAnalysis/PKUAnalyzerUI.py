@@ -85,10 +85,10 @@ def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample
             );
     #category: mu/el, HighPurity/LowPurity;   
     category_ID_label={
-            0: "elLP",
-            1: "elHP",
-            2: "muLP",
-            3: "muHP"
+            0: ("elLP", "e#nu, 1JLP"),
+            1: ("elHP", "e#nu, 1JHP"),
+            2: ("muLP", "#mu#nu, 1JLP"),
+            3: ("muHP", "#mu#nu, 1JHP")
             };
     
     #analyzer_config
