@@ -58,7 +58,8 @@ class doFit_wj_and_wlvj:
 
         # category
         self.categoryID    = self.analyzer_config["categoryID"];
-        self.categoryLabel = self.analyzer_config["categoryLabel"];# mu/el + HP/LP
+        self.categoryLabel = self.analyzer_config["categoryLabel"][0];#lable used for naming;
+        self.categoryTitle = self.analyzer_config["categoryLabel"][1];#title used for plot
         
         # limit variable, obs variable
         #narrow the obs0_variable_BinWidth and limit_variable_BinWidth by a factor of 5. Because Higgs-Combination-Tools will generate a binned sample, so need the bin width narrow. So, as a easy selution, we will increase the bin-width by a factor of 5 when ploting m_j m_WW
@@ -651,7 +652,7 @@ class doFit_wj_and_wlvj:
                 elif TString(leg_name).Contains("sigma"): 
                     leg_opt="F"; 
                 elif TString(leg_name).Data()=="data" : 
-                    leg_name="CMS Data "+self.categoryLabel; 
+                    leg_name="CMS Data "+self.categoryTitle; 
                     nLeg_data=nLeg_total;
                 elif TString(leg_name).Data()=="WJets" :
                     leg_name="W+jets"; 
