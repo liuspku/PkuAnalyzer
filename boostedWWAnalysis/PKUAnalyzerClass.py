@@ -283,6 +283,56 @@ class doFit_wj_and_wlvj:
 
         self.workspace4fit_.var("rrv_number"+label+in_range+"_"+self.categoryLabel+"_mlvj").Print();
 
+        #### Call the evaluation of the normalization in the signal region for signal, TTbar, VV, SingleT, and WJets after the extrapolation via alpha
+        self.get_pdf_signalregion_integral(label) ;
+
+
+    ##### Function that calculate the normalization inside the mlvj signal region (mass window around the resonance in order to fill datacards)
+    def get_pdf_signalregion_integral(self, label, model_name=""):
+
+        print "############### get mlvj normalization inside SR ",label," ",model_name," ##################"
+        if model_name == "":
+            model = self.workspace4fit_.pdf("model"+label+"_signalregion"+"_"+self.categoryLabel+"_mlvj");
+        else:
+            model = self.workspace4fit_.pdf(model_name);
+
+        rrv_mass_lvj = self.workspace4fit_.var("rrv_mass_lvj");
+
+        fullInt   = model.createIntegral(RooArgSet(rrv_mass_lvj),RooArgSet(rrv_mass_lvj) );
+        signalInt = model.createIntegral(RooArgSet(rrv_mass_lvj),RooArgSet(rrv_mass_lvj),("signalregion"));
+
+        fullInt_val = fullInt.getVal()
+        signalInt_val = signalInt.getVal()/fullInt_val
+
+        ## integal in the signal region
+        print "######### integral in SR: ",label+"signalInt=%s"%(signalInt_val)
+
+        print "####### Events Number in MC Dataset:"
+        self.workspace4fit_.var("rrv_number_dataset_signalregion"+label+"_"+self.categoryLabel+"_mlvj").Print();
+        self.workspace4fit_.var("rrv_number_dataset_AllRange"+label+"_"+self.categoryLabel+"_mlvj").Print();
+
+        print "########## Events Number get from fit:"
+        rrv_tmp=self.workspace4fit_.var("rrv_number"+label+"_signalregion"+"_"+self.categoryLabel+"_mlvj");
+        print "Events Number in Signal Region from fitting: %s"%(rrv_tmp.getVal()*signalInt_val)
+
+        #### store the info in the output file
+        self.file_out.write( "\n%s++++++++++++++++++++++++++++++++++++"%(label) )
+        self.file_out.write( "\nEvents Number in All Region from dataset : %s"%(self.workspace4fit_.var("rrv_number_dataset_AllRange"+label+"_"+self.categoryLabel+"_mlvj").getVal()) )
+        self.file_out.write( "\nEvents Number in Signal Region from dataset: %s"%(self.workspace4fit_.var("rrv_number_dataset_signalregion"+label+"_"+self.categoryLabel+"_mlvj").getVal()) )
+        self.file_out.write( "\nRatio signalregion/all_range from dataset :%s"%(self.workspace4fit_.var("rrv_number_dataset_signalregion"+label+"_"+self.categoryLabel+"_mlvj").getVal()/self.workspace4fit_.var("rrv_number_dataset_AllRange"+label+"_"+self.categoryLabel+"_mlvj").getVal() ) )
+        self.file_out.write( "\nEvents Number in All Region from fitting : %s\n"%(rrv_tmp.getVal()) )
+        self.file_out.write( "\nEvents Number in Signal Region from fitting: %s\n"%(rrv_tmp.getVal()*signalInt_val) )
+        self.file_out.write( "\nRatio signalregion/all_range from fitting :%s"%(signalInt_val ) )
+
+        if not self.workspace4fit_.var("rrv_number_fitting_signalregion"+label+"_"+self.categoryLabel+"_mlvj"):
+            rrv_number_fitting_signalregion_mlvj = RooRealVar("rrv_number_fitting_signalregion"+label+"_"+self.categoryLabel+"_mlvj","rrv_number_fitting_signalregion"+label+"_"+
+                    self.categoryLabel+"_mlvj", rrv_tmp.getVal()*signalInt_val );
+            getattr(self.workspace4fit_,"import")(rrv_number_fitting_signalregion_mlvj);
+        else :
+            self.workspace4fit_.var("rrv_number_fitting_signalregion"+label+"_"+self.categoryLabel+"_mlvj").setVal(rrv_tmp.getVal()*signalInt_val);
+
+        self.workspace4fit_.var("rrv_number_fitting_signalregion"+label+"_"+self.categoryLabel+"_mlvj").Print();
+
 
     #### run selection on data to build the datasets 
     def get_data(self):
@@ -763,7 +813,12 @@ class doFit_wj_and_wlvj:
 
         getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_mass_lvj"));
 
-        #### whole number of events from the considered signal sample, WJets, VV, TTbar, SingleT -> couting
+        #### number of events in signal region for every sigs and bkgs for cut-and-couting limit
+        for iter in range(self.nsig):
+            getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.sig_list[iter][0], self.categoryLabel)).clone("rate_%s_for_counting"%(self.sig_list[iter][0]) ))
+        for iter in range(self.nbkg):
+            getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.bkg_list[iter][0], self.categoryLabel)).clone("rate_%s_for_counting"%(self.bkg_list[iter][0]) ))
+
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone("rate_%s_for_counting"%(self.prime_signal_sample)))
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_WJets0_%s_mlvj"%(self.categoryLabel)).clone("rate_WJets_for_counting"))
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_VV_%s_mlvj"%(self.categoryLabel)).clone("rate_VV_for_counting"))
@@ -1029,7 +1084,7 @@ class doFit_wj_and_wlvj:
 
         ### Print the datacard for unbin and couting analysis
         self.print_limit_datacard("unbin",params_list);
-        #self.print_limit_datacard("counting");
+        self.print_limit_datacard("counting");
         ### Save the workspace
         self.save_workspace_to_file();
 
@@ -1051,8 +1106,8 @@ class doFit_wj_and_wlvj:
         datacard_out = open(getattr(self,"file_datacard_%s"%(datacard_mode)),"w");
 
         ### start to print inside 
-        datacard_out.write( "imax 1" )
-        datacard_out.write( "\njmax 4" )
+        datacard_out.write( "imax %s"%(self.nsig) )
+        datacard_out.write( "\njmax %s"%(self.nbkg) )
         datacard_out.write( "\nkmax *" )
         datacard_out.write( "\n--------------- ")
 
@@ -1070,22 +1125,36 @@ class doFit_wj_and_wlvj:
         #    datacard_out.write("\nshapes data_obs   CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
         #    datacard_out.write( "\n--------------- ")
 
-        #datacard_out.write( "\nbin CMS_%s1J%s "%(self.categoryLabel,self.wtagger_label));    
+        datacard_out.write( "\nbin CMS_%s "%(self.categoryLabel));    
         #if datacard_mode == "unbin":
         #    datacard_out.write( "\nobservation %0.2f "%(self.workspace4limit_.data("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label)).sumEntries()) )
-        #if datacard_mode == "counting":
-        #    datacard_out.write( "\nobservation %0.2f "%(self.workspace4limit_.var("observation_for_counting").getVal()) )
+        if datacard_mode == "counting":
+            datacard_out.write( "\nobservation %0.2f "%(self.workspace4limit_.var("observation_for_counting").getVal()) )
 
-        #datacard_out.write( "\n------------------------------" );
+        datacard_out.write( "\n------------------------------" );
 
-        #datacard_out.write( "\nbin CMS_%s1J%s CMS_%s1J%s CMS_%s1J%s CMS_%s1J%s CMS_%s1J%s"%(self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label,self.categoryLabel,self.wtagger_label));
+        tmp_bin_string="";
+        tmp_processname_string="";
+        tmp_processnum_string="";
+        tmp_rate_counting="";
+        for iter in range( self.nsig ):
+            tmp_bin_string        +="CMS_%s "%(self.categoryLabel); 
+            tmp_processname_string+="%s "%(self.sig_list[iter][0])
+            tmp_processnum_string +="%s "%(1-self.nsig+iter)
+            tmp_rate_counting     +="%0.5f "%( self.workspace4limit_.var("rate_%s_for_counting"%(self.sig_list[iter][0])).getVal() );
 
-        #if TString(self.prime_signal_sample).Contains("BulkG_WW"):
-        #    datacard_out.write( "\nprocess BulkWW WJets TTbar SingleT VV"); ## just one signal sample
-        #else:
-        #    datacard_out.write( "\nprocess %s WJets TTbar SingleT VV "%(self.prime_signal_sample)); ## just one signal sample
+        for iter in range( self.nbkg ):
+            tmp_bin_string        +="CMS_%s "%(self.categoryLabel); 
+            tmp_processname_string+="%s "%(self.bkg_list[iter][0])
+            tmp_processnum_string +="%s "%(1+iter)
+            tmp_rate_counting     +="%0.5f "%( self.workspace4limit_.var("rate_%s_for_counting"%(self.bkg_list[iter][0])).getVal() );
 
-        #datacard_out.write( "\nprocess -1 1 2 3 4" );
+
+
+
+        datacard_out.write( "\nbin "+tmp_bin_string );
+        datacard_out.write( "\nprocess "+tmp_processname_string ); ## just one signal sample
+        datacard_out.write( "\nprocess "+tmp_processnum_string );
 
         #### rates for the different process
         #if datacard_mode == "unbin":
@@ -1094,13 +1163,10 @@ class doFit_wj_and_wlvj:
         #    else:
         #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f "%(self.workspace4limit_.var("rate_%s_for_unbin"%(self.prime_signal_sample)).getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_unbin").getVal(), self.workspace4limit_.var("rate_TTbar_for_unbin").getVal(), self.workspace4limit_.var("rate_SingleT_for_unbin").getVal(), self.workspace4limit_.var("rate_VV_for_unbin").getVal() ) )
 
-        #if datacard_mode == "counting":
-        #    if TString(self.prime_signal_sample).Contains("BulkG_WW"):                    
-        #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f"%(self.workspace4limit_.var("rate_BulkWW_for_counting").getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_counting").getVal(), self.workspace4limit_.var("rate_TTbar_for_counting").getVal(), self.workspace4limit_.var("rate_SingleT_for_counting").getVal(), self.workspace4limit_.var("rate_VV_for_counting").getVal() ) )
-        #    else : 
-        #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f"%(self.workspace4limit_.var("rate_%s_for_counting"%(self.prime_signal_sample)).getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_counting").getVal(), self.workspace4limit_.var("rate_TTbar_for_counting").getVal(), self.workspace4limit_.var("rate_SingleT_for_counting").getVal(), self.workspace4limit_.var("rate_VV_for_counting").getVal() ) )
+        if datacard_mode == "counting":
+            datacard_out.write( "\nrate "+tmp_rate_counting );
 
-        #datacard_out.write( "\n-------------------------------- " )
+        datacard_out.write( "\n-------------------------------- " )
 
         #### luminosity nouisance
         #datacard_out.write( "\nlumi_8TeV lnN %0.3f - %0.3f %0.3f %0.3f"%(1.+self.lumi_uncertainty, 1.+self.lumi_uncertainty,1.+self.lumi_uncertainty,1.+self.lumi_uncertainty) )
@@ -2877,10 +2943,19 @@ class doFit_wj_and_wlvj:
 
         ## Keys 
         if in_model_name == "Keys":
-            print "########### Erf*Pow*Exp Pdf for Keys  ############"
+            print "########### Keys PDF  ############"
             rdataset = self.workspace4fit_.data("rdataset4fit"+label+"_"+self.categoryLabel+"_mlvj");
             rdataset.Print();
             model_pdf = RooKeysPdf("model_pdf"+label+"_"+self.categoryLabel+mass_spectrum,"model_pdf"+label+"_"+self.categoryLabel+mass_spectrum, rrv_x, rdataset);
+
+
+        ## Hist 
+        if in_model_name == "Hist":
+            print "########### Hist PDF  ############"
+            rdataset = self.workspace4fit_.data("rdataset4fit"+label+"_"+self.categoryLabel+"_mlvj");
+            rdataset.Print();
+            rdatahist= rdataset.binnedClone("rdatahist4fit"+label+"_"+self.categoryLabel+"_mlvj","rdatahist4fit"+label+"_"+self.categoryLabel+"_mlvj");
+            model_pdf = RooHistPdf("model_pdf"+label+"_"+self.categoryLabel+mass_spectrum,"model_pdf"+label+"_"+self.categoryLabel+mass_spectrum, RooArgSet(rrv_x), rdatahist);
 
         ## return the pdf
         getattr(self.workspace4fit_,"import")(model_pdf)
@@ -3613,15 +3688,15 @@ class doFit_wj_and_wlvj:
         self.fix_Model("_VV","_signalregion","_mlvj")
 
         ### Call the evaluation of the normalization in the signal region for signal, TTbar, VV, SingleT, and WJets after the extrapolation via alpha
-        self.get_mlvj_normalization_insignalregion("_%s"%(self.prime_signal_sample));
-        self.get_mlvj_normalization_insignalregion("_TTbar");
-        self.get_mlvj_normalization_insignalregion("_SingleT");
-        self.get_mlvj_normalization_insignalregion("_VV");
-        self.get_mlvj_normalization_insignalregion(label,"model_pdf%s_signalregion_%s_after_correct_mlvj"%(label,self.categoryLabel));    
+        self.get_pdf_signalregion_integral("_%s"%(self.prime_signal_sample));
+        self.get_pdf_signalregion_integral("_TTbar");
+        self.get_pdf_signalregion_integral("_SingleT");
+        self.get_pdf_signalregion_integral("_VV");
+        self.get_pdf_signalregion_integral(label,"model_pdf%s_signalregion_%s_after_correct_mlvj"%(label,self.categoryLabel));    
 
 
     ##### Function that calculate the normalization inside the mlvj signal region (mass window around the resonance in order to fill datacards)
-    def get_mlvj_normalization_insignalregion(self, label, model_name=""):
+    def get_pdf_signalregion_integral(self, label, model_name=""):
 
         print "############### get mlvj normalization inside SR ",label," ",model_name," ##################"
         if model_name == "":
