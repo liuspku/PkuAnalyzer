@@ -75,20 +75,20 @@ def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample
     sig_bkg_files=(
             2, # nsig: number of signal channels
             4, # nbkg: number of background channels
-            ("data"   , 1  , file_Directory+"treeEDBR_data_xww.root"                         , ( 0, "Keys") ), #data file
-            ("G900"   , 1  , file_Directory+"treeEDBR_BulkG_WW_inclusive_c0p2_M900_xww.root" , ( 0, "Keys") ), #sig
-            ("G1000"  , 1  , file_Directory+"treeEDBR_BulkG_WW_inclusive_c0p2_M1000_xww.root", ( 0, "Keys") ), #sig
-            ("WJets"  , 2  , file_Directory+"treeEDBR_WJetsPt100_xww.root"                   , ( 0, "Keys") ), #bkg
-            ("TTbar"  , 210, file_Directory+"treeEDBR_TTBARpowheg_xww.root"                  , ( 0, "Keys") ), #bkg
-            ("SingleT", 7  , file_Directory+"treeEDBR_SingleTop_xww.root"                    , ( 0, "Keys") ), #bkg
-            ("VV"     , 4  , file_Directory+"treeEDBR_VV_xww.root"                           , ( 0, "Keys") )  #bkg
+            ("data"   , 1  , file_Directory+"treeEDBR_data_xww.root"                         , ( 0, "Hist") ), #data file
+            ("G900"   , 1  , file_Directory+"treeEDBR_BulkG_WW_inclusive_c0p2_M900_xww.root" , ( 0, "Hist") ), #sig
+            ("G1000"  , 1  , file_Directory+"treeEDBR_BulkG_WW_inclusive_c0p2_M1000_xww.root", ( 0, "Hist") ), #sig
+            ("WJets"  , 2  , file_Directory+"treeEDBR_WJetsPt100_xww.root"                   , ( 0, "Hist") ), #bkg
+            ("TTbar"  , 210, file_Directory+"treeEDBR_TTBARpowheg_xww.root"                  , ( 0, "Hist") ), #bkg
+            ("SingleT", 7  , file_Directory+"treeEDBR_SingleTop_xww.root"                    , ( 0, "Hist") ), #bkg
+            ("VV"     , 4  , file_Directory+"treeEDBR_VV_xww.root"                           , ( 0, "Hist") )  #bkg
             );
     #category: mu/el, HighPurity/LowPurity;   
     category_ID_label={
-            0: ("elLP", "e#nu, 1JLP"),
-            1: ("elHP", "e#nu, 1JHP"),
-            2: ("muLP", "#mu#nu, 1JLP"),
-            3: ("muHP", "#mu#nu, 1JHP")
+            0: ("elLP", "W#rightarrow e#nu, 1JLP"),
+            1: ("elHP", "W#rightarrow e#nu, 1JHP"),
+            2: ("muLP", "W#rightarrow #mu#nu, 1JLP"),
+            3: ("muHP", "W#rightarrow #mu#nu, 1JHP")
             };
     
     #analyzer_config
@@ -119,8 +119,8 @@ def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample
             "additioninformation": options.additioninformation
             };
     boostedW_fitter=doFit_wj_and_wlvj( analyzer_config);
-    #boostedW_fitter.analysis();
-    boostedW_fitter.read_workspace(1);
+    boostedW_fitter.analysis();
+    #boostedW_fitter.read_workspace(1);
 
 '''
 ### run full analysis
