@@ -14,7 +14,7 @@ from ROOT import gROOT, TPaveLabel, gStyle, gSystem, TGaxis, TStyle, TLatex, TSt
 
 ROOT.gSystem.Load("PDFs/PdfDiagonalizer_cc.so")
 ROOT.gSystem.Load("PDFs/Util_cxx.so")
-ROOT.gSystem.Load("PDFs/RooRelBWRunningWidth_cxx.so")
+#ROOT.gSystem.Load("PDFs/RooRelBWRunningWidth_cxx.so")
 ROOT.gSystem.Load("PDFs/HWWLVJRooPdfs_cxx.so")
 from ROOT import draw_error_band, draw_error_band_extendPdf, draw_error_band_Decor, draw_error_band_shape_Decor, Calc_error_extendPdf, Calc_error, RooErfExpPdf, RooAlpha, RooAlpha4ErfPowPdf, RooAlpha4ErfPow2Pdf, RooAlpha4ErfPowExpPdf, PdfDiagonalizer, RooPowPdf, RooPow2Pdf, RooErfPowExpPdf, RooErfPowPdf, RooErfPow2Pdf, RooQCDPdf, RooUser1Pdf, RooBWRunPdf, RooAnaExpNPdf, RooExpNPdf, RooAlpha4ExpNPdf, RooExpTailPdf, RooAlpha4ExpTailPdf, Roo2ExpPdf, RooAlpha42ExpPdf
 #
@@ -104,6 +104,7 @@ class doFit_wj_and_wlvj:
         # input and output init
         ######################
         self.additioninformation=self.analyzer_config["additioninformation"];
+        self.signal_scale= self.analyzer_config["signal_scale"];
 
         self.prime_signal_sample=self.sig_bkg_files[3][0];#first signal as prime signal
         self.nsig=self.sig_bkg_files[0];
@@ -624,7 +625,7 @@ class doFit_wj_and_wlvj:
             rrv_rate.Print();
 
             ### signal scale to be visible in the plots
-            signal_scale=25;
+            signal_scale=self.signal_scale;
             scale_number_signal = rrv_rate.getVal()/data_obs.sumEntries()*signal_scale;
             model_pdf.plotOn(mplot,RooFit.Normalization(scale_number_signal),RooFit.Name("%s #times %s"%(self.sig_list[iter][0], signal_scale)),RooFit.DrawOption("L"), RooFit.LineColor(self.color_palet[self.sig_list[0][0]]), RooFit.LineStyle(2), RooFit.VLines());
 
