@@ -116,7 +116,8 @@ def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample
             "obs0_variable_uppersideband_range_max": 130,
             "fit_model": "ErfExp_v1", 
             "fit_model_alter": "ErfPow_v1",
-            "additioninformation": options.additioninformation
+            "additioninformation": options.additioninformation,
+            "signal_scale":25 
             };
     boostedW_fitter=doFit_wj_and_wlvj( analyzer_config);
     boostedW_fitter.analysis();
