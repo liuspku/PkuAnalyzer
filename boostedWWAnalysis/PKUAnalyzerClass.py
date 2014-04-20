@@ -10,14 +10,7 @@ import subprocess
 from subprocess import Popen
 from optparse import OptionParser
 
-from ROOT import gROOT, TPaveLabel, gStyle, gSystem, TGaxis, TStyle, TLatex, TString, TF1,TFile,TLine, TLegend, TH1D,TH2D,THStack,TChain, TCanvas, TMatrixDSym, TMath, TText, TPad, RooFit, RooArgSet, RooArgList, RooArgSet, RooAbsData, RooAbsPdf, RooAddPdf, RooWorkspace, RooExtendPdf,RooCBShape, RooLandau, RooFFTConvPdf, RooGaussian, RooBifurGauss, RooArgusBG,RooDataSet, RooExponential,RooBreitWigner, RooVoigtian, RooNovosibirsk, RooRealVar,RooFormulaVar, RooDataHist, RooHist,RooCategory, RooChebychev, RooSimultaneous, RooGenericPdf,RooConstVar, RooKeysPdf, RooHistPdf, RooEffProd, RooProdPdf, TIter, kTRUE, kFALSE, kGray, kRed, kDashed, kGreen,kAzure, kOrange, kBlack,kBlue,kYellow,kCyan, kMagenta, kWhite
-
-ROOT.gSystem.Load("PDFs/PdfDiagonalizer_cc.so")
-ROOT.gSystem.Load("PDFs/Util_cxx.so")
-#ROOT.gSystem.Load("PDFs/RooRelBWRunningWidth_cxx.so")
-ROOT.gSystem.Load("PDFs/HWWLVJRooPdfs_cxx.so")
-from ROOT import draw_error_band, draw_error_band_extendPdf, draw_error_band_Decor, draw_error_band_shape_Decor, Calc_error_extendPdf, Calc_error, RooErfExpPdf, RooAlpha, RooAlpha4ErfPowPdf, RooAlpha4ErfPow2Pdf, RooAlpha4ErfPowExpPdf, PdfDiagonalizer, RooPowPdf, RooPow2Pdf, RooErfPowExpPdf, RooErfPowPdf, RooErfPow2Pdf, RooQCDPdf, RooUser1Pdf, RooBWRunPdf, RooAnaExpNPdf, RooExpNPdf, RooAlpha4ExpNPdf, RooExpTailPdf, RooAlpha4ExpTailPdf, Roo2ExpPdf, RooAlpha42ExpPdf
-#
+from PKUAnalyzerTools import * 
 
 ###############################
 ## doFit Class Implemetation ##
@@ -37,7 +30,7 @@ class doFit_wj_and_wlvj:
         # plot init
         ######################
         #plot style
-        self.setTDRStyle();
+        setTDRStyle();
         # color palet for plots
         self.color_palet={ 
                 'Uncertainty' : kBlack,
@@ -106,13 +99,15 @@ class doFit_wj_and_wlvj:
         self.additioninformation=self.analyzer_config["additioninformation"];
         self.signal_scale= self.analyzer_config["signal_scale"];
 
-        self.prime_signal_sample=self.sig_bkg_files[3][0];#first signal as prime signal
         self.nsig=self.sig_bkg_files[0];
         self.nbkg=self.sig_bkg_files[1];
         self.sig_list=[];
         self.bkg_list=[];
+        #self.allsignals=self.sig_bkg_files[3][0];#first signal as prime signal
+        self.allsignals="";#first signal as prime signal
         for iter in range(3, 3+self.nsig):
             self.sig_list.append( self.sig_bkg_files[iter] );
+            self.allsignals+=self.sig_bkg_files[iter][0]; 
             #self.sig_list.append( (self.sig_bkg_files[iter][0], self.sig_bkg_files[iter][2]) );
         for iter in range( 3+self.nsig, 3+self.nsig+self.nbkg):
             self.bkg_list.append( self.sig_bkg_files[iter] );
@@ -127,12 +122,12 @@ class doFit_wj_and_wlvj:
             os.system("mkdir %s"%(self.rlt_DIR));
 
         ## extra text file
-        self.file_rlt_txt = self.rlt_DIR+"other_wwlvj_%s.txt"%(self.prime_signal_sample)
+        self.file_rlt_txt = self.rlt_DIR+"other_wwlvj_%s.txt"%(self.allsignals)
         ## workspace for limit
-        self.file_rlt_root = self.rlt_DIR+"wwlvj_%s_workspace.root"%(self.prime_signal_sample)
+        self.file_rlt_root = self.rlt_DIR+"wwlvj_%s_workspace.root"%(self.allsignals)
         ## datacard for cut&count and ubninned limit
-        self.file_datacard_unbin = self.rlt_DIR+"wwlvj_%s_unbin.txt"%(self.prime_signal_sample)
-        self.file_datacard_counting = self.rlt_DIR+"wwlvj_%s_counting.txt"%(self.prime_signal_sample)
+        self.file_datacard_unbin = self.rlt_DIR+"wwlvj_%s_unbin.txt"%(self.allsignals)
+        self.file_datacard_counting = self.rlt_DIR+"wwlvj_%s_counting.txt"%(self.allsignals)
 
         self.file_out=open(self.file_rlt_txt,"w");
         self.file_out.write("Welcome:\n");
@@ -186,9 +181,9 @@ class doFit_wj_and_wlvj:
         #        TString(self.file_signal).Contains("BulkG_WW_inclusive_M1500_W450") or TString(self.file_signal).Contains("BulkG_WW_inclusive_M1500_W75") or
         #        TString(self.file_signal).Contains("BulkG_WW_inclusive_M2100_W105") or TString(self.file_signal).Contains("BulkG_WW_inclusive_M2100_W315") or
         #        TString(self.file_signal).Contains("BulkG_WW_inclusive_M2100_W450")):
-        #    self.fit_limit_variable_SingleChannel(self.file_signal,"_%s"%(self.prime_signal_sample),"_signalregion",model_width, 0, 0, 0, 0);            
+        #    self.fit_limit_variable_SingleChannel(self.file_signal,"_%s"%(self.allsignals),"_signalregion",model_width, 0, 0, 0, 0);            
         #else:
-        #    self.fit_limit_variable_SingleChannel(self.file_signal,"_%s"%(self.prime_signal_sample),"_signalregion",model_narrow, 0, 0, 0, 0);
+        #    self.fit_limit_variable_SingleChannel(self.file_signal,"_%s"%(self.allsignals),"_signalregion",model_narrow, 0, 0, 0, 0);
 
     ### Define the Extended Pdf for and mlvj fit giving: label, fit model name, list constraint, range to be fitted and do the decorrelation
     #def fit_limit_variable_SingleChannel(self,in_file_name, label, in_range, mlvj_model, deco=0, show_constant_parameter=0, logy=0, ismc=0):
@@ -203,7 +198,7 @@ class doFit_wj_and_wlvj:
         ## make the extended pdf model
         if fit_config[1]=="Kyes": number_rdata=rdataset.sumEntries();
         else: number_rdata=500;
-        model = self.make_Model(label+in_range,fit_config,"_mlvj",constrainslist,ismc, number_rdata);
+        model = self.make_Model(label+in_range,fit_config,"_mlvj", number_rdata);
 
         ## make the fit
         model.fitTo( rdataset, RooFit.Save(1), RooFit.SumW2Error(kTRUE) ,RooFit.Extended(kTRUE) );
@@ -512,7 +507,8 @@ class doFit_wj_and_wlvj:
         print rrv_number_dataset_AllRange_mlvj.getVal()
 
     ### Define the Extended Pdf for and mJ fit giving: label, fit model name, list constraint and ismc
-    def make_Model(self, label, fit_config, mass_spectrum="_mj", ConstraintsList=[], ismc_wjet=0, area_init_value=500):
+    #def make_Model(self, label, fit_config, mass_spectrum="_mj", ConstraintsList=[], ismc_wjet=0, area_init_value=500):
+    def make_Model(self, label, fit_config, mass_spectrum, area_init_value=500):
 
         ##### define an extended pdf from a standard Roofit One
         print " "
@@ -523,7 +519,8 @@ class doFit_wj_and_wlvj:
 
         rrv_number = RooRealVar("rrv_number"+label+"_"+self.categoryLabel+mass_spectrum,"rrv_number"+label+"_"+self.categoryLabel+mass_spectrum,area_init_value,0.,1e7);
         ## call the make RooAbsPdf method
-        model_pdf = self.make_Pdf(label, fit_config,mass_spectrum,ConstraintsList,ismc_wjet)
+        #model_pdf = self.make_Pdf(label, fit_config,mass_spectrum,ConstraintsList,ismc_wjet)
+        model_pdf = make_Pdf(label+"_"+self.categoryLabel, self.workspace4fit_, fit_config,mass_spectrum)
         print "######## Model Pdf ########"        
         model_pdf.Print();
 
@@ -820,14 +817,14 @@ class doFit_wj_and_wlvj:
         for iter in range(self.nbkg):
             getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.bkg_list[iter][0], self.categoryLabel)).clone("rate_%s_for_counting"%(self.bkg_list[iter][0]) ))
 
-        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone("rate_%s_for_counting"%(self.prime_signal_sample)))
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_mlvj"%(self.allsignals,self.categoryLabel)).clone("rate_%s_for_counting"%(self.allsignals)))
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_WJets0_%s_mlvj"%(self.categoryLabel)).clone("rate_WJets_for_counting"))
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_VV_%s_mlvj"%(self.categoryLabel)).clone("rate_VV_for_counting"))
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_TTbar_%s_mlvj"%(self.categoryLabel)).clone("rate_TTbar_for_counting"))
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_SingleT_%s_mlvj"%(self.categoryLabel)).clone("rate_SingleT_for_counting"))
 
         ##### number of signal, Wjets, VV, TTbar and SingleT --> unbin
-        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_%s_signalregion_%s_mlvj"%(self.prime_signal_sample, self.categoryLabel)).clone("rate_%s_for_unbin"%(self.prime_signal_sample)));
+        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_%s_signalregion_%s_mlvj"%(self.allsignals, self.categoryLabel)).clone("rate_%s_for_unbin"%(self.allsignals)));
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_WJets0_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_WJets_for_unbin"));
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_VV_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_VV_for_unbin"));
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_TTbar_signalregion_%s_mlvj"%(self.categoryLabel)).clone("rate_TTbar_for_unbin"));
@@ -868,10 +865,10 @@ class doFit_wj_and_wlvj:
         #else:
         #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_VV_signalregion_%s_mlvj"%(self.categoryLabel)).clone("VV_%s_%s"%(self.categoryLabel,self.wtagger_label)))
 
-        #if TString(self.prime_signal_sample).Contains("BulkG_WW"):
-        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_%s_signalregion_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone("BulkWW_%s_%s"%(self.categoryLabel, self.wtagger_label)))
+        #if TString(self.allsignals).Contains("BulkG_WW"):
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_%s_signalregion_%s_mlvj"%(self.allsignals,self.categoryLabel)).clone("BulkWW_%s_%s"%(self.categoryLabel, self.wtagger_label)))
         #else:    
-        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_%s_signalregion_%s_mlvj"%(self.prime_signal_sample,self.categoryLabel)).clone(self.prime_signal_sample+"_%s_%s"%(self.categoryLabel, self.wtagger_label)))
+        #    getattr(self.workspace4limit_,"import")(self.workspace4fit_.pdf("model_pdf_%s_signalregion_%s_mlvj"%(self.allsignals,self.categoryLabel)).clone(self.allsignals+"_%s_%s"%(self.categoryLabel, self.wtagger_label)))
 
         #### Fix all the Pdf parameters 
         #rrv_x = self.workspace4limit_.var("rrv_mass_lvj");
@@ -881,10 +878,10 @@ class doFit_wj_and_wlvj:
         #self.fix_Pdf(self.workspace4limit_.pdf("VV_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooArgSet(rrv_x));
         #self.fix_Pdf(self.workspace4limit_.pdf("WJets_%s_%s"%(self.categoryLabel,self.wtagger_label)), RooArgSet(rrv_x));
 
-        #if TString(self.prime_signal_sample).Contains("BulkG_WW"):            
+        #if TString(self.allsignals).Contains("BulkG_WW"):            
         #    self.fix_Pdf(self.workspace4limit_.pdf("BulkWW_%s_%s"%(self.categoryLabel, self.wtagger_label)), RooArgSet(rrv_x));
         #else:    
-        #    self.fix_Pdf(self.workspace4limit_.pdf(self.prime_signal_sample+"_%s_%s"%(self.categoryLabel, self.wtagger_label)), RooArgSet(rrv_x));
+        #    self.fix_Pdf(self.workspace4limit_.pdf(self.allsignals+"_%s_%s"%(self.categoryLabel, self.wtagger_label)), RooArgSet(rrv_x));
 
         #print " ############## Workspace for limit ";
         #parameters_workspace = self.workspace4limit_.allVars();
@@ -1043,13 +1040,13 @@ class doFit_wj_and_wlvj:
 
 
         ##### add signal shape parameters' uncertainty -> increase the uncertainty on the mean and the sigma since we are using a CB or a Double CB or a BWxDB or BWxCB
-        #if self.workspace4limit_.var("rrv_mean_CB_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)):
+        #if self.workspace4limit_.var("rrv_mean_CB_%s_signalregion_%s_%s"%(self.allsignals, self.categoryLabel, self.wtagger_label)):
 
-        #    self.workspace4limit_.var( "rrv_mean_shift_scale_lep_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.mean_signal_uncertainty_lep_scale);
-        #   self.workspace4limit_.var( "rrv_mean_shift_scale_jes_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.mean_signal_uncertainty_jet_scale);
-        #   self.workspace4limit_.var( "rrv_sigma_shift_lep_scale_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.sigma_signal_uncertainty_lep_scale);
-        #   self.workspace4limit_.var( "rrv_sigma_shift_jes_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.sigma_signal_uncertainty_jet_scale);
-        #   self.workspace4limit_.var( "rrv_sigma_shift_res_%s_signalregion_%s_%s"%(self.prime_signal_sample, self.categoryLabel, self.wtagger_label)).setError(self.sigma_signal_uncertainty_jet_res);
+        #    self.workspace4limit_.var( "rrv_mean_shift_scale_lep_%s_signalregion_%s_%s"%(self.allsignals, self.categoryLabel, self.wtagger_label)).setError(self.mean_signal_uncertainty_lep_scale);
+        #   self.workspace4limit_.var( "rrv_mean_shift_scale_jes_%s_signalregion_%s_%s"%(self.allsignals, self.categoryLabel, self.wtagger_label)).setError(self.mean_signal_uncertainty_jet_scale);
+        #   self.workspace4limit_.var( "rrv_sigma_shift_lep_scale_%s_signalregion_%s_%s"%(self.allsignals, self.categoryLabel, self.wtagger_label)).setError(self.sigma_signal_uncertainty_lep_scale);
+        #   self.workspace4limit_.var( "rrv_sigma_shift_jes_%s_signalregion_%s_%s"%(self.allsignals, self.categoryLabel, self.wtagger_label)).setError(self.sigma_signal_uncertainty_jet_scale);
+        #   self.workspace4limit_.var( "rrv_sigma_shift_res_%s_signalregion_%s_%s"%(self.allsignals, self.categoryLabel, self.wtagger_label)).setError(self.sigma_signal_uncertainty_jet_res);
 
         #   if self.categoryLabel == "mu":
         #       self.workspace4limit_.var("CMS_sig_p1_scale_m").setError(1);
@@ -1114,10 +1111,10 @@ class doFit_wj_and_wlvj:
 
         #if datacard_mode == "unbin":
         #    fnOnly = ntpath.basename(self.file_rlt_root) ## workspace for limit --> output file for the workspace
-        #    if TString(self.prime_signal_sample).Contains("BulkG_WW"):
+        #    if TString(self.allsignals).Contains("BulkG_WW"):
         #        datacard_out.write("\nshapes BulkWW  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
         #    else:
-        #        datacard_out.write("\nshapes %s  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.prime_signal_sample,self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
+        #        datacard_out.write("\nshapes %s  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.allsignals,self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
 
         #    datacard_out.write("\nshapes WJets  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
         #    datacard_out.write("\nshapes TTbar  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
@@ -1159,10 +1156,10 @@ class doFit_wj_and_wlvj:
 
         #### rates for the different process
         #if datacard_mode == "unbin":
-        #    if TString(self.prime_signal_sample).Contains("BulkG_WW"):                    
+        #    if TString(self.allsignals).Contains("BulkG_WW"):                    
         #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f "%(self.workspace4limit_.var("rate_BulkWW_for_unbin").getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_unbin").getVal(), self.workspace4limit_.var("rate_TTbar_for_unbin").getVal(), self.workspace4limit_.var("rate_SingleT_for_unbin").getVal(), self.workspace4limit_.var("rate_VV_for_unbin").getVal() ) )
         #    else:
-        #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f "%(self.workspace4limit_.var("rate_%s_for_unbin"%(self.prime_signal_sample)).getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_unbin").getVal(), self.workspace4limit_.var("rate_TTbar_for_unbin").getVal(), self.workspace4limit_.var("rate_SingleT_for_unbin").getVal(), self.workspace4limit_.var("rate_VV_for_unbin").getVal() ) )
+        #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f "%(self.workspace4limit_.var("rate_%s_for_unbin"%(self.allsignals)).getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_unbin").getVal(), self.workspace4limit_.var("rate_TTbar_for_unbin").getVal(), self.workspace4limit_.var("rate_SingleT_for_unbin").getVal(), self.workspace4limit_.var("rate_VV_for_unbin").getVal() ) )
 
         if datacard_mode == "counting":
             datacard_out.write( "\nrate "+tmp_rate_counting );
@@ -1318,7 +1315,7 @@ class doFit_wj_and_wlvj:
                 param=par.Next();
 
         ## create the directory where store the plots
-        Directory = TString(in_directory+self.prime_signal_sample);
+        Directory = TString(in_directory+self.allsignals);
         if not Directory.EndsWith("/"):Directory = Directory.Append("/");
         if not os.path.isdir(Directory.Data()):
             os.system("mkdir -p "+Directory.Data());
@@ -1379,7 +1376,7 @@ class doFit_wj_and_wlvj:
         banner = self.banner4Plot();
         banner.Draw();
 
-        Directory=TString(in_directory+self.prime_signal_sample);
+        Directory=TString(in_directory+self.allsignals);
         if not Directory.EndsWith("/"):Directory=Directory.Append("/");
         if not os.path.isdir(Directory.Data()):
             os.system("mkdir -p "+Directory.Data());
@@ -1400,111 +1397,10 @@ class doFit_wj_and_wlvj:
             rlt_file.ReplaceAll(".pdf",".png");
             cMassFit.SaveAs(rlt_file.Data());
 
-
-    def setTDRStyle(self): ## Set basic TDR style for canvas, pad ..etc ..
-        print "setting TDR style"
-        self.tdrStyle =TStyle("tdrStyle","Style for P-TDR");
-        #For the canvas:
-        self.tdrStyle.SetCanvasBorderMode(0);
-        self.tdrStyle.SetCanvasColor(kWhite);
-        self.tdrStyle.SetCanvasDefH(600); #Height of canvas
-        self.tdrStyle.SetCanvasDefW(600); #Width of canvas
-        self.tdrStyle.SetCanvasDefX(0); #POsition on screen
-        self.tdrStyle.SetCanvasDefY(0);
-
-        #For the Pad:
-        self.tdrStyle.SetPadBorderMode(0);
-        self.tdrStyle.SetPadColor(kWhite);
-        self.tdrStyle.SetPadGridX(False);
-        self.tdrStyle.SetPadGridY(False);
-        self.tdrStyle.SetGridColor(0);
-        self.tdrStyle.SetGridStyle(3);
-        self.tdrStyle.SetGridWidth(1);
-
-        #For the frame:
-        self.tdrStyle.SetFrameBorderMode(0);
-        self.tdrStyle.SetFrameBorderSize(1);
-        self.tdrStyle.SetFrameFillColor(0);
-        self.tdrStyle.SetFrameFillStyle(0);
-        self.tdrStyle.SetFrameLineColor(1);
-        self.tdrStyle.SetFrameLineStyle(1);
-        self.tdrStyle.SetFrameLineWidth(1);
-
-        #For the histo:
-        self.tdrStyle.SetHistLineColor(1);
-        self.tdrStyle.SetHistLineStyle(0);
-        self.tdrStyle.SetHistLineWidth(1);
-        self.tdrStyle.SetEndErrorSize(2);
-        self.tdrStyle.SetErrorX(0.);
-        self.tdrStyle.SetMarkerStyle(20);
-
-        #For the fit/function:
-        self.tdrStyle.SetOptFit(1);
-        self.tdrStyle.SetFitFormat("5.4g");
-        self.tdrStyle.SetFuncColor(2);
-        self.tdrStyle.SetFuncStyle(1);
-        self.tdrStyle.SetFuncWidth(1);
-
-        #For the date:
-        self.tdrStyle.SetOptDate(0);
-
-        #For the statistics box:
-        self.tdrStyle.SetOptFile(0);
-        self.tdrStyle.SetOptStat(0); #To display the mean and RMS:
-        self.tdrStyle.SetStatColor(kWhite);
-        self.tdrStyle.SetStatFont(42);
-        self.tdrStyle.SetStatFontSize(0.025);
-        self.tdrStyle.SetStatTextColor(1);
-        self.tdrStyle.SetStatFormat("6.4g");
-        self.tdrStyle.SetStatBorderSize(1);
-        self.tdrStyle.SetStatH(0.1);
-        self.tdrStyle.SetStatW(0.15);
-
-        #Margins:
-        self.tdrStyle.SetPadTopMargin(0.05);
-        self.tdrStyle.SetPadBottomMargin(0.13);
-        self.tdrStyle.SetPadLeftMargin(0.18);
-        self.tdrStyle.SetPadRightMargin(0.06);
-
-        #For the Global title:
-        self.tdrStyle.SetOptTitle(0);
-        self.tdrStyle.SetTitleFont(42);
-        self.tdrStyle.SetTitleColor(1);
-        self.tdrStyle.SetTitleTextColor(1);
-        self.tdrStyle.SetTitleFillColor(10);
-        self.tdrStyle.SetTitleFontSize(0.05);
-
-        #For the axis titles:
-        self.tdrStyle.SetTitleColor(1, "XYZ");
-        self.tdrStyle.SetTitleFont(42, "XYZ");
-        self.tdrStyle.SetTitleSize(0.03, "XYZ");
-        self.tdrStyle.SetTitleXOffset(0.9);
-        self.tdrStyle.SetTitleYOffset(1.5);
-
-        #For the axis labels:
-        self.tdrStyle.SetLabelColor(1, "XYZ");
-        self.tdrStyle.SetLabelFont(42, "XYZ");
-        self.tdrStyle.SetLabelOffset(0.007, "XYZ");
-        self.tdrStyle.SetLabelSize(0.03, "XYZ");
-
-        #For the axis:
-        self.tdrStyle.SetAxisColor(1, "XYZ");
-        self.tdrStyle.SetStripDecimals(kTRUE);
-        self.tdrStyle.SetTickLength(0.03, "XYZ");
-        self.tdrStyle.SetNdivisions(510, "XYZ");
-        self.tdrStyle.SetPadTickX(1); #To get tick marks on the opposite side of the frame
-        self.tdrStyle.SetPadTickY(1);
-
-        #Change for log plots:
-        self.tdrStyle.SetOptLogx(0);
-        self.tdrStyle.SetOptLogy(0);
-        self.tdrStyle.SetOptLogz(0);
-
-        #Postscript options:
-        self.tdrStyle.SetPaperSize(20.,20.);
-        self.tdrStyle.cd();
+        #print "Show %s; ENTER to continue!"%(label);raw_input("ENTER");
 
     #### Method to make a RooAbsPdf giving label, model name, spectrum, if it is mc or not and a constraint list for the parameters          
+    '''
     def make_Pdf(self, label, fit_config, mass_spectrum="_mj", ConstraintsList=[],ismc = 0):
         if TString(mass_spectrum).Contains("_mj"): rrv_x = self.workspace4fit_.var("rrv_mass_j");
         if TString(mass_spectrum).Contains("_mlvj"): rrv_x = self.workspace4fit_.var("rrv_mass_lvj");
@@ -2961,7 +2857,7 @@ class doFit_wj_and_wlvj:
         ## return the pdf
         getattr(self.workspace4fit_,"import")(model_pdf)
         return self.workspace4fit_.pdf("model_pdf"+label+"_"+self.categoryLabel+mass_spectrum)
-
+'''
 '''
     ########### Gaussian contraint of a parameter of a pdf
     def addConstraint(self, rrv_x, x_mean, x_sigma, ConstraintsList):
@@ -3106,7 +3002,7 @@ class doFit_wj_and_wlvj:
     ###### get Signal model mlvj in a region 
     def get_signal_mlvj_Model(self, mlvj_region="_signalregion"):
         print "########### Fixing signal mlvj model for the region",mlvj_region,"  ############"
-        return self.get_General_mlvj_Model("_%s"%(self.prime_signal_sample),mlvj_region);
+        return self.get_General_mlvj_Model("_%s"%(self.allsignals),mlvj_region);
 
     ###### get VV mlvj in a region 
     def get_VV_mlvj_Model(self, mlvj_region="_signalregion"):
@@ -3683,13 +3579,13 @@ class doFit_wj_and_wlvj:
         self.get_WJets_mlvj_correction_lowersideband_to_signalregion(label,mlvj_model);
 
         ### Fix the pdf of signal, TTbar, SingleT and VV in the signal region 
-        self.fix_Model("_%s"%(self.prime_signal_sample),"_signalregion","_mlvj")
+        self.fix_Model("_%s"%(self.allsignals),"_signalregion","_mlvj")
         self.fix_Model("_TTbar","_signalregion","_mlvj")
         self.fix_Model("_SingleT","_signalregion","_mlvj")
         self.fix_Model("_VV","_signalregion","_mlvj")
 
         ### Call the evaluation of the normalization in the signal region for signal, TTbar, VV, SingleT, and WJets after the extrapolation via alpha
-        self.get_pdf_signalregion_integral("_%s"%(self.prime_signal_sample));
+        self.get_pdf_signalregion_integral("_%s"%(self.allsignals));
         self.get_pdf_signalregion_integral("_TTbar");
         self.get_pdf_signalregion_integral("_SingleT");
         self.get_pdf_signalregion_integral("_VV");
@@ -4052,7 +3948,7 @@ class doFit_wj_and_wlvj:
         mplot.addObject(self.plot_legend);
 
         ## set the Y axis in arbitrary unit 
-        if self.prime_signal_sample=="ggH600" or self.prime_signal_sample=="ggH700": tmp_y_max=0.25
+        if self.allsignals=="ggH600" or self.allsignals=="ggH700": tmp_y_max=0.25
         else: tmp_y_max=0.28
         mplot.GetYaxis().SetRangeUser(0.,tmp_y_max);
 
