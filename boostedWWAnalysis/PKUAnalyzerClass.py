@@ -819,12 +819,6 @@ class doFit:
         for iter in range(self.nbkg):
             getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_limit_variable"%(self.bkg_list[iter][0], self.categoryLabel)).clone("rate_%s_for_counting"%(self.bkg_list[iter][0]) ))
 
-        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_%s_%s_limit_variable"%(self.allsignals,self.categoryLabel)).clone("rate_%s_for_counting"%(self.allsignals)))
-        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_WJets0_%s_limit_variable"%(self.categoryLabel)).clone("rate_WJets_for_counting"))
-        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_VV_%s_limit_variable"%(self.categoryLabel)).clone("rate_VV_for_counting"))
-        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_TTbar_%s_limit_variable"%(self.categoryLabel)).clone("rate_TTbar_for_counting"))
-        #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_fitting_signalregion_SingleT_%s_limit_variable"%(self.categoryLabel)).clone("rate_SingleT_for_counting"))
-
         ##### number of signal, Wjets, VV, TTbar and SingleT --> unbin
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_%s_signalregion_%s_limit_variable"%(self.allsignals, self.categoryLabel)).clone("rate_%s_for_unbin"%(self.allsignals)));
         #getattr(self.workspace4limit_,"import")(self.workspace4fit_.var("rrv_number_WJets0_signalregion_%s_limit_variable"%(self.categoryLabel)).clone("rate_WJets_for_unbin"));
@@ -1428,6 +1422,7 @@ class doFit:
         ral_rate_bkgs=RooArgList();
         rate_total_bkgs=0.;
         rate_error2_total_bkgs=0.;#error2: error^2
+        model_WJets=0;  
         for iter in range(self.nbkg):
             pdf= self.workspace4fit_.pdf("model_%s_%s_obs0_variable"%(self.bkg_list[iter][0], self.categoryLabel));
             pdf.Print();
@@ -1441,6 +1436,7 @@ class doFit:
             else:
                 rrv_rate.setRange(rrv_rate.getVal()/2., rrv_rate.getVal()*2); 
                 rrv_rate.setConstant(0);
+                model_WJets=pdf;
             rrv_rate.Print();
             rate_bkgs.append( rrv_rate);
             ral_pdf_bkgs.add(pdf);
@@ -1463,34 +1459,19 @@ class doFit:
         rfresult = model_Total_bkgs.fitTo( rdataset_data_obs0_variable, RooFit.Save(1) , RooFit.Range("lowersideband,uppersideband") ,RooFit.Extended(kTRUE), RooFit.NumCPU(2), RooFit.Minimizer("Minuit2") );
         rfresult.Print(); rfresult.covarianceMatrix().Print();
         getattr(self.workspace4fit_,"import")(model_Total_bkgs);
-        raw_input("ENTER");
 
+        rate_total_bkgs=0.;
+        rate_error2_total_bkgs=0.;#error2: error^2
+        for iter in range(self.nbkg):
+            rrv_rate= self.workspace4fit_.var("rrv_number_%s_%s_obs0_variable"%(self.bkg_list[iter][0], self.categoryLabel));
+            rrv_rate.Print();
+            rate_total_bkgs+=rrv_rate.getVal();
+            rate_error2_total_bkgs+=rrv_rate.getError()*rrv_rate.getError();
+        rrv_number_Total_bkgs = RooRealVar("rrv_number_Total_bkgs","rrv_number_Total_bkgs", rate_total_bkgs);
+        rrv_number_Total_bkgs.setError( TMath.Sqrt( rate_error2_total_bkgs) );
+        rrv_number_Total_bkgs.Print();
 
-
-        ### Total numver of event 
-        #rrv_number_Total_bkgs = RooRealVar("rrv_number_data%s_%s_obs0_variable"%(massscale,self.categoryLabel),"rrv_number_data%s_%s_obs0_variable"%(massscale,self.categoryLabel),
-        #        self.workspace4fit_.var("rrv_number_TTbar%s_%s_obs0_variable"%(massscale,self.categoryLabel)).getVal()+
-        #        self.workspace4fit_.var("rrv_number_SingleT%s_%s_obs0_variable"%(massscale,self.categoryLabel)).getVal()+
-        #        self.workspace4fit_.var("rrv_number_VV%s_%s_obs0_variable"%(massscale,self.categoryLabel)).getVal()+
-        #        self.workspace4fit_.var("rrv_number%s_%s_obs0_variable"%(label,self.categoryLabel)).getVal());
-
-        #rrv_number_Total_bkgs.setError(TMath.Sqrt(self.workspace4fit_.var("rrv_number_TTbar%s_%s_obs0_variable"%(massscale,self.categoryLabel)).getError()*
-        #    self.workspace4fit_.var("rrv_number_TTbar%s_%s_obs0_variable"%(massscale,self.categoryLabel)).getError()+
-        #    self.workspace4fit_.var("rrv_number_SingleT%s_%s_obs0_variable"%(massscale,self.categoryLabel)).getError()*
-        #    self.workspace4fit_.var("rrv_number_SingleT%s_%s_obs0_variable"%(massscale,self.categoryLabel)).getError()+
-        #    self.workspace4fit_.var("rrv_number_VV%s_%s_obs0_variable"%(massscale,self.categoryLabel)).getError()*
-        #    self.workspace4fit_.var("rrv_number_VV%s_%s_obs0_variable"%(massscale,self.categoryLabel)).getError()+
-        #    self.workspace4fit_.var("rrv_number%s_%s_obs0_variable"%(label,self.categoryLabel)).getError()*
-        #    self.workspace4fit_.var("rrv_number%s_%s_obs0_variable"%(label,self.categoryLabel)).getError()));
-        #getattr(self.workspace4fit_,"import")(rrv_number_Total_bkgs);
-
-
-
-
-
-        #### scale factor in order to scale MC to data in the final plot -> in order to avoid the normalization to data which is done by default in rooFit
-        #scale_number_Total_bkgs = rrv_number_Total_bkgs.getVal()/rdataset_data_obs0_variable.sumEntries()
-        #print scale_number_Total_bkgs, rrv_number_Total_bkgs.getVal(), rdataset_data_obs0_variable.sumEntries()
+        #raw_input("ENTER");
 
         #### create the frame
         mplot = rrv_obs0_variable.frame(RooFit.Title("check_workspace"), RooFit.Bins(int(rrv_obs0_variable.getBins()/self.BinWidth_narrow_factor)));
@@ -1502,11 +1483,6 @@ class doFit:
 
             model_Total_bkgs.plotOn(mplot, RooFit.Components(matrix_model_pdf_bkgs[iter]), RooFit.Name(self.bkg_list[iter][0]+"_line"), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
             model_Total_bkgs.plotOn(mplot, RooFit.Components(matrix_model_pdf_bkgs[iter]), RooFit.Name(self.bkg_list[iter][0]+"_line"), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.Range(rrv_obs0_variable.getMin(),rrv_obs0_variable.getMax()),RooFit.LineStyle(kDashed) ,RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        # RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["VV"]), RooFit.LineColor(kBlack),RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-        # RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["VV"]), RooFit.LineColor(kBlack),RooFit.FillStyle(3002),RooFit.Range(rrv_obs0_variable.getMin(),rrv_obs0_variable.getMax()),RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-        # RooFit.LineColor(kBlack), RooFit.LineWidth(2) ,RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-        # RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.Range(rrv_obs0_variable.getMin(),rrv_obs0_variable.getMax()),RooFit.LineStyle(kDashed) ,RooFit.NormRange("lowersideband,uppersideband"));
 
 
         #### plot the observed data using poissonian error bar
@@ -1529,98 +1505,36 @@ class doFit:
         parameters_list = RooArgList();
         self.draw_canvas_with_pull( mplot, mplot_pull,parameters_list,"plots_%s_%s/obs0_variable/"%(self.additioninformation, self.categoryLabel),"DataDriven4WJets_fit_jetmass","",0,1);
 
-
-        ### if fit on Wjets default with the default shape
-        #if TString(label).Contains("_WJets0"):
-
-        #    ## make the final plot
-        #    mplot = rrv_obs0_variable.frame(RooFit.Title(""), RooFit.Bins(int(rrv_obs0_variable.getBins()/self.BinWidth_narrow_factor)));
-        #    rdataset_data_obs0_variable.plotOn(mplot, RooFit.Name("data_invisible"), RooFit.MarkerSize(1.5), RooFit.DataError(RooAbsData.Poisson), RooFit.XErrorSize(0) );
-
-        #    ## plot solid style 
-        #    model_data.plotOn(mplot,RooFit.Name("VV"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable,model_TTbar_%s_obs0_variable,model_VV_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel,self.categoryLabel,self.categoryLabel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["VV"]), RooFit.LineColor(kBlack),RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    model_data.plotOn(mplot,RooFit.Name("TTbar"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable,model_TTbar_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel,self.categoryLabel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["TTbar"]), RooFit.LineColor(kBlack),RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    model_data.plotOn(mplot,RooFit.Name("SingleT"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["SingleT"]), RooFit.LineColor(kBlack),RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    model_data.plotOn(mplot,RooFit.Name("WJets"), RooFit.Components("model%s_%s_obs0_variable"%(label,self.categoryLabel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["WJets"]), RooFit.LineColor(kBlack),RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    ## plot "dashed" style area
-        #    model_data.plotOn(mplot,RooFit.Name("VV_invisible"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable,model_TTbar_%s_obs0_variable,model_VV_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel,self.categoryLabel,self.categoryLabel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["VV"]), RooFit.LineColor(kBlack),RooFit.FillStyle(3002),RooFit.Range(rrv_obs0_variable.getMin(),rrv_obs0_variable.getMax()),RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    model_data.plotOn(mplot,RooFit.Name("TTbar_invisible"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable,model_TTbar_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel,self.categoryLabel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["TTbar"]), RooFit.LineColor(kBlack),RooFit.FillStyle(3002),RooFit.Range(rrv_obs0_variable.getMin(),rrv_obs0_variable.getMax()),RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    model_data.plotOn(mplot,RooFit.Name("SingleT_invisible"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["SingleT"]), RooFit.LineColor(kBlack),RooFit.FillStyle(3002),RooFit.Range(rrv_obs0_variable.getMin(),rrv_obs0_variable.getMax()),RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-        #    model_data.plotOn(mplot,RooFit.Name("WJets_invisible"), RooFit.Components("model%s_%s_obs0_variable"%(label,self.categoryLabel)),RooFit.DrawOption("F"), RooFit.FillColor(self.color_palet["WJets"]),RooFit.FillStyle(3002),RooFit.Range(rrv_obs0_variable.getMin(),rrv_obs0_variable.getMax()), RooFit.LineColor(kBlack),RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-
-        #    ### solid line
-        #    model_data.plotOn( mplot,RooFit.Name("_invisible"), RooFit.Components("model%s_%s_obs0_variable"%(label,self.categoryLabel)), RooFit.LineColor(kBlack), RooFit.LineWidth(2) ,RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    model_data.plotOn( mplot,RooFit.Name("_invisible"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel)), RooFit.LineColor(kBlack), RooFit.LineWidth(2),RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    model_data.plotOn( mplot,RooFit.Name("_invisible"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable,model_TTbar_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel,self.categoryLabel)), RooFit.LineColor(kBlack), RooFit.LineWidth(2) ,RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    model_data.plotOn( mplot,RooFit.Name("_invisible"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable,model_TTbar_%s_obs0_variable,model_VV_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel,self.categoryLabel,self.categoryLabel)),RooFit.LineColor(kBlack), RooFit.LineWidth(2) ,RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    ### dash line
-        #    model_data.plotOn( mplot,RooFit.Name("_invisible"), RooFit.Components("model%s_%s_obs0_variable"%(label,self.categoryLabel)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.Range(rrv_obs0_variable.getMin(),rrv_obs0_variable.getMax()),RooFit.LineStyle(kDashed) ,RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    model_data.plotOn( mplot,RooFit.Name("_invisible"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.Range(rrv_obs0_variable.getMin(),rrv_obs0_variable.getMax()),RooFit.LineStyle(kDashed) ,RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    model_data.plotOn( mplot,RooFit.Name("_invisible"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable,model_TTbar_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel,self.categoryLabel)), RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.Range(rrv_obs0_variable.getMin(),rrv_obs0_variable.getMax()),RooFit.LineStyle(kDashed) ,RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    model_data.plotOn( mplot,RooFit.Name("_invisible"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable,model_TTbar_%s_obs0_variable,model_VV_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel,self.categoryLabel,self.categoryLabel)),RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.Range(rrv_obs0_variable.getMin(),rrv_obs0_variable.getMax()),RooFit.LineStyle(kDashed) ,RooFit.NormRange("lowersideband,uppersideband"), RooFit.VLines());
-
-        #    model_data.plotOn( mplot,RooFit.Name("_invisible"), RooFit.Components("model%s_%s_obs0_variable,model_SingleT_%s_obs0_variable,model_TTbar_%s_obs0_variable,model_VV_%s_obs0_variable"%(label,self.categoryLabel,self.categoryLabel,self.categoryLabel,self.categoryLabel)),RooFit.LineColor(kBlack), RooFit.LineWidth(2), RooFit.Range(rrv_obs0_variable.getMin(),rrv_obs0_variable.getMax()),RooFit.LineStyle(kDashed) ,RooFit.NormRange("lowersideband,uppersideband"));
-
-        #    rdataset_data_obs0_variable.plotOn(mplot, RooFit.Name("data"), RooFit.MarkerSize(1.5), RooFit.DataError(RooAbsData.Poisson), RooFit.XErrorSize(0) );
-
-        #    ### draw the error band using the sum of all the entries component MC + fit           
-        #    draw_error_band(rdataset_data_obs0_variable, model_data, rrv_number_Total_bkgs,rfresult,mplot,self.color_palet["Uncertainty"],"F");
-        #    rdataset_data_obs0_variable.plotOn(mplot, RooFit.Name("data_invisible"), RooFit.MarkerSize(1.5), RooFit.DataError(RooAbsData.Poisson), RooFit.XErrorSize(0) );
-
-        #    ### Get the pull and plot it 
-        #    mplot_pull=self.get_pull(rrv_obs0_variable,mplot);
-
-        #    obs0_variable_signalregion_range_min= rrv_obs0_variable.getMin("signalregion");
-        #    obs0_variable_signalregion_range_max= rrv_obs0_variable.getMax("signalregion");
-
-        #    ### signal window zone with vertical lines
-        #    lowerLine = TLine(obs0_variable_signalregion_range_min,0.,obs0_variable_signalregion_range_min,mplot.GetMaximum()*0.9); lowerLine.SetLineWidth(2); lowerLine.SetLineColor(kBlack); lowerLine.SetLineStyle(9);
-        #    upperLine = TLine(obs0_variable_signalregion_range_max,0.,obs0_variable_signalregion_range_max,mplot.GetMaximum()*0.9); upperLine.SetLineWidth(2); upperLine.SetLineColor(kBlack); upperLine.SetLineStyle(9);
-        #    mplot.addObject(lowerLine);
-        #    mplot.addObject(upperLine);
-
-        #    ### plot_legend of the plot
-        #    self.plot_legend = self.legend4Plot(mplot,0,1,-0.10,-0.01,0.10,0.01);
-        #    mplot.addObject(self.plot_legend);
-        #    mplot.GetYaxis().SetRangeUser(1e-2,mplot.GetMaximum()*1.6);
-
-        #    parameters_list = model_data.getParameters(rdataset_data_obs0_variable);
-        #    self.draw_canvas_with_pull( mplot, mplot_pull,parameters_list,"plots_%s_%s_%s_%s/m_j_fitting_wtaggercut%s/"%(self.additioninformation, self.categoryLabel,self.PS_model,self.wtagger_label, self.wtagger_label), "m_j_sideband%s"%(label),"",1)
-
-        #    ### call the function for getting the normalizatio in signal region for data, TTbar, SingleT, VV and W+jets = label -> store in a output txt file
-        #    self.get_obs0_variable_normalization_insignalregion("_data");
-        #    self.get_obs0_variable_normalization_insignalregion("_TTbar");
-        #    self.get_obs0_variable_normalization_insignalregion("_SingleT");
-        #    self.get_obs0_variable_normalization_insignalregion("_VV");
-        #    self.get_obs0_variable_normalization_insignalregion(label);
+        #### call the function for getting the normalizatio in signal region for data, TTbar, SingleT, VV and W+jets = label -> store in a output txt file
+        #self.get_obs0_variable_normalization_insignalregion("_data");
+        #self.get_obs0_variable_normalization_insignalregion("_TTbar");
+        #self.get_obs0_variable_normalization_insignalregion("_SingleT");
+        #self.get_obs0_variable_normalization_insignalregion("_VV");
+        #self.get_obs0_variable_normalization_insignalregion(label);
 
         ##### to calculate the WJets's normalization and error in M_J signalregion. The error must contain the shape error: model_WJets have new parameters fitting data
-        #fullInt   = model_WJets.createIntegral(RooArgSet(rrv_obs0_variable),RooArgSet(rrv_obs0_variable) );
-        #signalInt = model_WJets.createIntegral(RooArgSet(rrv_obs0_variable),RooArgSet(rrv_obs0_variable),("signalregion"));
-        #fullInt_val = fullInt.getVal()
-        #signalInt_val = signalInt.getVal()/fullInt_val
-        ### take the value from the fit (normalization) and multiply it from the ratio of the integrals
-        #rrv_number_WJets_in_obs0_variable_signalregion_from_fitting = RooRealVar("rrv_number%s_in_obs0_variable_signalregion_from_fitting_%s"%(label,self.categoryLabel),"rrv_number%s_in_obs0_variable_signalregion_from_fitting_%s"%(label,self.categoryLabel),self.workspace4fit_.var("rrv_number%s_%s_obs0_variable"%(label,self.categoryLabel)).getVal()*signalInt_val);
+        fullInt   = model_WJets.createIntegral(RooArgSet(rrv_obs0_variable),RooArgSet(rrv_obs0_variable) );
+        signalInt = model_WJets.createIntegral(RooArgSet(rrv_obs0_variable),RooArgSet(rrv_obs0_variable),("signalregion"));
+        fullInt_val = fullInt.getVal()
+        signalInt_val = signalInt.getVal()/fullInt_val
+        ## take the value from the fit (normalization) and multiply it from the ratio of the integrals
+        label="_WJets";
+        rrv_number_WJets_in_obs0_variable_signalregion_from_fitting = RooRealVar("rrv_number%s_in_obs0_variable_signalregion_from_fitting_%s"%(label,self.categoryLabel), "rrv_number%s_in_obs0_variable_signalregion_from_fitting_%s"%(label,self.categoryLabel), self.workspace4fit_.var("rrv_number%s_%s_obs0_variable"%(label,self.categoryLabel)).getVal()*signalInt_val);
 
         ##### Error on the normalization --> from a dedicated function taking into account shape uncertainty
-        #rrv_number_WJets_in_obs0_variable_signalregion_from_fitting.setError( Calc_error_extendPdf(rdataset_data_obs0_variable, model_WJets, rfresult,"signalregion") );
-        #print "########## error on the normaliztion due to shape + norm = %s"%(rrv_number_WJets_in_obs0_variable_signalregion_from_fitting.getError());
-        #getattr(self.workspace4fit_,"import")(rrv_number_WJets_in_obs0_variable_signalregion_from_fitting);
-        #rrv_number_WJets_in_obs0_variable_signalregion_from_fitting.Print();
+        rrv_number_WJets_in_obs0_variable_signalregion_from_fitting.setError( Calc_error_extendPdf(rdataset_data_obs0_variable, model_WJets, rfresult,"signalregion") );
+        print "########## error on the normaliztion due to shape + norm = %s"%(rrv_number_WJets_in_obs0_variable_signalregion_from_fitting.getError());
+        getattr(self.workspace4fit_,"import")(rrv_number_WJets_in_obs0_variable_signalregion_from_fitting);
+        rrv_number_WJets_in_obs0_variable_signalregion_from_fitting.Print();
+
+        rrv_number_WJets_in_obs0_variable_signalregion_old=self.workspace4fit_.var("rrv_number_WJets_signalregion"+"_"+self.categoryLabel+"_limit_variable");
+        rrv_number_WJets_in_obs0_variable_signalregion_old.Print();
+
+        rrv_WJets_counting=self.workspace4fit_.var("rrv_number_fitting_signalregion_WJets_%s_limit_variable"%(self.categoryLabel));
+        rrv_WJets_counting.setVal( rrv_WJets_counting.getVal()* rrv_number_WJets_in_obs0_variable_signalregion_from_fitting.getVal()/rrv_number_WJets_in_obs0_variable_signalregion_old.getVal()  );
+
+        rrv_number_WJets_in_obs0_variable_signalregion_old.setVal( rrv_number_WJets_in_obs0_variable_signalregion_from_fitting.getVal() );
+        rrv_number_WJets_in_obs0_variable_signalregion_old.setError( rrv_number_WJets_in_obs0_variable_signalregion_from_fitting.getError() );
 
 
     #### Method to make a RooAbsPdf giving label, model name, spectrum, if it is mc or not and a constraint list for the parameters          
