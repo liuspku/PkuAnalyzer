@@ -943,7 +943,7 @@ def fix_Model(self, label, limit_variable_region="_signalregion",mass_spectrum="
         param=par.Next()
 
 ### fix a pdf in a different way --> for RooAbsPdf 
-def fix_Pdf(self,model_pdf,argset_notparameter):
+def fix_Pdf(model_pdf,argset_notparameter):
     print "########### Fixing a RooAbsPdf for limit_variable or obs0_variable  ############"        
     parameters = model_pdf.getParameters(argset_notparameter);
     par=parameters.createIterator(); par.Reset();
@@ -954,7 +954,7 @@ def fix_Pdf(self,model_pdf,argset_notparameter):
         param=par.Next()
 
 ### print the parameters of a given pdf --> only non constant ones
-def ShowParam_Pdf(self,model_pdf,argset_notparameter):
+def ShowParam_Pdf(model_pdf,argset_notparameter):
     print "########### Show Parameters of a input model  ############"        
     model_pdf.Print()
     parameters = model_pdf.getParameters(argset_notparameter);
