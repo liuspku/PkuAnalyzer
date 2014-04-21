@@ -131,10 +131,11 @@ def setTDRStyle():
 
 #label+self.categoryLabel:  label 
 #workspace4fit_: workspace 
-#def make_Pdf( label, fit_config, mass_spectrum="_mj", ConstraintsList=[],ismc = 0):
+#def make_Pdf( label, fit_config, mass_spectrum="_obs0_variable", ConstraintsList=[],ismc = 0):
 def make_Pdf( label, workspace, fit_config, mass_spectrum):
-    if TString(mass_spectrum).Contains("_mj"): rrv_x = workspace.var("rrv_mass_j");
-    if TString(mass_spectrum).Contains("_mlvj"): rrv_x = workspace.var("rrv_mass_lvj");
+    #if TString(mass_spectrum).Contains("_obs0_variable"): rrv_x = workspace.var("rrv_mass_j");
+    #if TString(mass_spectrum).Contains("_limit_variable"): rrv_x = workspace.var("rrv_mass_lvj");
+    rrv_x = workspace.var("rrv"+mass_spectrum);
 
     in_model_name=fit_config[1];
 
@@ -148,7 +149,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
 
     # Higgs mass 600-1000
     if in_model_name == "Voig_v1":
-        print "########### Voigtian Pdf for Higgs mlvj ############"
+        print "########### Voigtian Pdf for Higgs limit_variable ############"
         rrv_mean_voig=RooRealVar("rrv_mean_voig"+label,"rrv_mean_voig"+label,650,550,1200);
         rrv_width_voig=RooRealVar("rrv_width_voig"+label,"rrv_width_voig"+label,100.,10,600);
         rrv_sigma_voig=RooRealVar("rrv_sigma_voig"+label,"rrv_sigma_voig"+label,200,10,400);
@@ -156,7 +157,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
 
     # Bulk mass 600-1000
     if in_model_name == "Voig_v2":
-        print "########### Voigtian Pdf for Higgs mlvj ############"
+        print "########### Voigtian Pdf for Higgs limit_variable ############"
         rrv_mean_voig=RooRealVar("rrv_mean_voig"+label,"rrv_mean_voig"+label,1000,900,1100);#
         rrv_width_voig=RooRealVar("rrv_width_voig"+label,"rrv_width_voig"+label,2.5,0,10);
         rrv_sigma_voig=RooRealVar("rrv_sigma_voig"+label,"rrv_sigma_voig"+label,40,10,80);
@@ -165,7 +166,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
 
     ## BW for the W mass peak 
     if in_model_name == "BW":            
-        print "########### BW Pdf for mj fit ############"
+        print "########### BW Pdf for obs0_variable fit ############"
         rrv_mean_BW=RooRealVar("rrv_mean_BW"+label,"rrv_mean_BW"+label,84,78, 88);
         rrv_width_BW=RooRealVar("rrv_width_BW"+label,"rrv_width_BW"+label,20,1,40);
         model_pdf = RooBreitWigner("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum, rrv_x,rrv_mean_BW,rrv_width_BW);
@@ -193,7 +194,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
     ##  Voig for W mass peak
     if in_model_name == "2Voig":
 
-        print "########### Double Voigtian for mj fit ############"
+        print "########### Double Voigtian for obs0_variable fit ############"
         rrv_mean_voig    = RooRealVar("rrv_mean_voig"+label,"rrv_mean_voig"+label,84,78,88);#W mass 80.385
         rrv_shift_2Voig  = RooRealVar("rrv_shift_2Voig"+label,"rrv_shift_2Voig"+label,10.8026)# Z mass: 91.1876; shift=91.1876-80.385=10.8026
         rrv_mean_shifted = RooFormulaVar("rrv_mean_voig2"+label,"@0+@1",RooArgList(rrv_mean_voig,rrv_shift_2Voig));
@@ -218,7 +219,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
     ## Gaus for the higgs lineshape
     if in_model_name == "Gaus_v1":
 
-        print "########### Gaus for Higgs mlvj ############"
+        print "########### Gaus for Higgs limit_variable ############"
         rrv_mean_gaus  = RooRealVar("rrv_mean_gaus"+label,"rrv_mean_gaus"+label,920,900,1000);
         rrv_sigma_gaus = RooRealVar("rrv_sigma_gaus"+label,"rrv_sigma_gaus"+label,200,100,300);
 
@@ -226,7 +227,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
 
     if in_model_name == "BifurGaus_v1":
 
-        print "########### BifurGaus for Higgs mlvj ############"
+        print "########### BifurGaus for Higgs limit_variable ############"
         rrv_mean_gaus   = RooRealVar("rrv_mean_gaus"+label,"rrv_mean_gaus"+label,920,900,1000);
         rrv_sigma1_gaus = RooRealVar("rrv_sigma1_gaus"+label,"rrv_sigma1_gaus"+label,200,100,300);
         rrv_sigma2_gaus = RooRealVar("rrv_sigma2_gaus"+label,"rrv_sigma2_gaus"+label,200,100,300);
@@ -235,7 +236,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
 
     ## Crystal Ball for the W mass peak
     if in_model_name == "CB":
-        print "########### Cystal Ball for mj fit ############"
+        print "########### Cystal Ball for obs0_variable fit ############"
         rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label,"rrv_mean_CB"+label,84,78,88);
         rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label,"rrv_sigma_CB"+label,7,4,10);
         rrv_alpha_CB = RooRealVar("rrv_alpha_CB"+label,"rrv_alpha_CB"+label,-2,-4,-0.5);
@@ -278,7 +279,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
 
     ## Crystal  ball shape for Bulk GR samples and higgs 
     if in_model_name == "CB_v1":
-        print "########### Crystal Ball for Higgs and  Bulk GR  mlvj ############"
+        print "########### Crystal Ball for Higgs and  Bulk GR  limit_variable ############"
         label_tstring=TString(label);
 
         rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label,"rrv_mean_CB"+label,920,800,1150);
@@ -348,7 +349,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
     ## Crystal  ball shape for Bulk GR samples and higgs 
     if in_model_name == "DoubleCB_v1":
         label_tstring=TString(label);
-        print "########### Double CB for Bulk graviton mlvj ############"
+        print "########### Double CB for Bulk graviton limit_variable ############"
 
         rrv_mean_CB  = RooRealVar("rrv_mean_CB"+label,"rrv_mean_CB"+label,700,550,2500);
         rrv_sigma_CB = RooRealVar("rrv_sigma_CB"+label,"rrv_sigma_CB"+label, 50,20 ,120);
@@ -460,7 +461,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
     ## ExpN pdf for W+jets bkg fit
     if in_model_name == "ExpN":
 
-        print "########### ExpN funtion for W+jets mlvj ############"
+        print "########### ExpN funtion for W+jets limit_variable ############"
         rrv_c_ExpN = RooRealVar("rrv_c_ExpN"+label,"rrv_c_ExpN"+label,-3e-3,-1e-1,-1e-5);
         rrv_n_ExpN = RooRealVar("rrv_n_ExpN"+label,"rrv_n_ExpN"+label, 1e3, -1e2, 1e4);
 
@@ -469,7 +470,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
 
     ## levelled exp for W+jets bkg fit
     if in_model_name == "ExpTail":
-        print "########### ExpTai = levelled exp funtion for W+jets mlvj ############"
+        print "########### ExpTai = levelled exp funtion for W+jets limit_variable ############"
         rrv_s_ExpTail = RooRealVar("rrv_s_ExpTail"+label,"rrv_s_ExpTail"+label, 110,20,242);
         rrv_a_ExpTail = RooRealVar("rrv_a_ExpTail"+label,"rrv_a_ExpTail"+label, 2.9e-2,-1e-2,7.5e-2);
 
@@ -477,7 +478,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
 
     ## sum of two exponential 
     if in_model_name == "2Exp":
-        print "########### 2Exp = levelled exp funtion for W+jets mlvj ############"
+        print "########### 2Exp = levelled exp funtion for W+jets limit_variable ############"
         rrv_c0_2Exp   = RooRealVar("rrv_c0_2Exp"+label,"rrv_c0_2Exp"+label, -5e-3, -8e-3,-4e-3);
         rrv_c1_2Exp   = RooRealVar("rrv_c1_2Exp"+label,"rrv_c1_2Exp"+label, -1e-3, -4e-3,-1e-4);
         rrv_frac_2Exp = RooRealVar("rrv_frac_2Exp"+label,"rrv_frac_2Exp"+label, 0., 0., 1e-2);
@@ -485,38 +486,38 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
 
     ## sum of two exponential 
     if in_model_name == "Exp" or in_model_name == "Exp_sr":
-        print "########### Exp = levelled exp funtion for W+jets mlvj ############"
+        print "########### Exp = levelled exp funtion for W+jets limit_variable ############"
         rrv_c_Exp = RooRealVar("rrv_c_Exp"+label,"rrv_c_Exp"+label,-0.05,-0.1,0.);
         model_pdf = ROOT.RooExponential("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,rrv_x,rrv_c_Exp);
 
-    ## Erf times for mj spectrum
+    ## Erf times for obs0_variable spectrum
     if in_model_name == "ErfExp" :
-        print "########### Erf*Exp for mj fit  ############"
+        print "########### Erf*Exp for obs0_variable fit  ############"
         rrv_c_ErfExp      = RooRealVar("rrv_c_ErfExp"+label,"rrv_c_ErfExp"+label,-0.05,-0.1,-1e-4);
         rrv_offset_ErfExp = RooRealVar("rrv_offset_ErfExp"+label,"rrv_offset_ErfExp"+label,60.,30.,120);
         rrv_width_ErfExp  = RooRealVar("rrv_width_ErfExp"+label,"rrv_width_ErfExp"+label,30.,10, 60.);
         model_pdf         = ROOT.RooErfExpPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,rrv_x,rrv_c_ErfExp,rrv_offset_ErfExp,rrv_width_ErfExp);
 
-    ## different initial values -> for mlvj
+    ## different initial values -> for limit_variable
     if in_model_name == "ErfExp_v1" :
-        print "########### Erf*Exp for mlvj fit  ############"
+        print "########### Erf*Exp for limit_variable fit  ############"
         rrv_c_ErfExp      = RooRealVar("rrv_c_ErfExp"+label,"rrv_c_ErfExp"+label,-0.006,-0.1,0.);
         rrv_offset_ErfExp = RooRealVar("rrv_offset_ErfExp"+label,"rrv_offset_ErfExp"+label,450.,400.,550.);
         rrv_width_ErfExp  = RooRealVar("rrv_width_ErfExp"+label,"rrv_width_ErfExp"+label,70.,10,100.);
         model_pdf         = ROOT.RooErfExpPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,rrv_x,rrv_c_ErfExp,rrv_offset_ErfExp,rrv_width_ErfExp);
 
-    ## different initial values -> for mlvj
+    ## different initial values -> for limit_variable
     if in_model_name == "ErfExp_v2" : 
-        print "########### Erf*Exp for mlvj fit  ############"
+        print "########### Erf*Exp for limit_variable fit  ############"
         rrv_c_ErfExp       = RooRealVar("rrv_c_ErfExp"+label,"rrv_c_ErfExp"+label,-0.005,-0.1,0.);
         rrv_offset_ErfExp  = RooRealVar("rrv_offset_ErfExp"+label,"rrv_offset_ErfExp"+label,450.,400.,500.);
         rrv_width_ErfExp   = RooRealVar("rrv_width_ErfExp"+label,"rrv_width_ErfExp"+label, 50.,10,100.);
         rrv_residue_ErfExp = RooRealVar("rrv_residue_ErfExp"+label,"rrv_residue_ErfExp"+label,0.,0.,1.);
         model_pdf = RooGenericPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum, "(TMath::Exp(%s*%s) + %s)*(1.+TMath::Erf((%s-%s)/%s))/2. "%(rrv_c_ErfExp.GetName(),rrv_x.GetName(), rrv_residue_ErfExp.GetName(), rrv_x.GetName(),rrv_offset_ErfExp.GetName(), rrv_width_ErfExp.GetName()), RooArgList(rrv_x,rrv_c_ErfExp,rrv_offset_ErfExp,rrv_width_ErfExp,rrv_residue_ErfExp) )
 
-    ## different initial values -> for mlvj
+    ## different initial values -> for limit_variable
     if in_model_name == "ErfExp_v3" : #different init-value and range
-        print "########### Erf*Exp for mlvj fit  ############"
+        print "########### Erf*Exp for limit_variable fit  ############"
         rrv_c_ErfExp       = RooRealVar("rrv_c_ErfExp"+label,"rrv_c_ErfExp"+label,-0.005,-0.1,0.);
         rrv_offset_ErfExp  = RooRealVar("rrv_offset_ErfExp"+label,"rrv_offset_ErfExp"+label,450.,400,500.);
         rrv_width_ErfExp   = RooRealVar("rrv_width_ErfExp"+label,"rrv_width_ErfExp"+label, 50.,10,100.);
@@ -525,9 +526,9 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
         rrv_high_ErfExp.setConstant(kTRUE);
         model_pdf = RooGenericPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum, "(TMath::Exp(%s*%s) + %s)* TMath::Power( ((1+TMath::Erf((%s-%s)/%s))/2.), %s )"%(rrv_c_ErfExp.GetName(),rrv_x.GetName(), rrv_residue_ErfExp.GetName(),rrv_x.GetName(),rrv_offset_ErfExp.GetName(), rrv_width_ErfExp.GetName(), rrv_high_ErfExp.GetName()), RooArgList(rrv_x,rrv_c_ErfExp,rrv_offset_ErfExp,rrv_high_ErfExp,rrv_width_ErfExp,rrv_residue_ErfExp) )
 
-    ## Exp+Gaus or mj spectrum
+    ## Exp+Gaus or obs0_variable spectrum
     if in_model_name == "ExpGaus":
-        print "########### Exp + Gaus for mj  fit  ############"
+        print "########### Exp + Gaus for obs0_variable  fit  ############"
         rrv_c_Exp       = RooRealVar("rrv_c_Exp"+label,"rrv_c_Exp"+label,0.05,-0.2,0.2);
         exp             = ROOT.RooExponential("exp"+label,"exp"+label,rrv_x,rrv_c_Exp);
 
@@ -538,9 +539,9 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
 
         model_pdf       = RooAddPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,RooArgList(exp,gaus),RooArgList(rrv_high))
 
-    ## Erf*Exp + Gaus for mj spectrum 
+    ## Erf*Exp + Gaus for obs0_variable spectrum 
     if in_model_name == "ErfExpGaus":
-        print "########### Erf*Exp + Gaus for mj  fit  ############"
+        print "########### Erf*Exp + Gaus for obs0_variable  fit  ############"
         rrv_c_ErfExp      = RooRealVar("rrv_c_ErfExp"+label,"rrv_c_ErfExp"+label,-0.05,-0.4,0.);
         rrv_offset_ErfExp = RooRealVar("rrv_offset_ErfExp"+label,"rrv_offset_ErfExp"+label,100.,10.,300.);
         rrv_width_ErfExp  = RooRealVar("rrv_width_ErfExp"+label,"rrv_width_ErfExp"+label,30.,10,100.);
@@ -554,9 +555,9 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
         rrv_high  = RooRealVar("rrv_high"+label,"rrv_high"+label,0.7,0.,1.);
         model_pdf = RooAddPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,RooArgList(erfExp,gaus),RooArgList(rrv_high))
 
-    ## Erf*Exp + Gaus for mj spectrum with offset == mean
+    ## Erf*Exp + Gaus for obs0_variable spectrum with offset == mean
     if in_model_name == "ErfExpGaus_sp":
-        print "########### Erf*Exp + Gaus for mj  fit  ############"
+        print "########### Erf*Exp + Gaus for obs0_variable  fit  ############"
         rrv_c_ErfExp     = RooRealVar("rrv_c_ErfExp"+label,"rrv_c_ErfExp"+label,-0.05,-0.2,0.);
         rrv_width_ErfExp = RooRealVar("rrv_width_ErfExp"+label,"rrv_width_ErfExp"+label,30.,10,200.);
         erfExp           = ROOT.RooErfExpPdf("erfExp"+label,"erfExp"+label,rrv_x,rrv_c_ErfExp,rrv_mean1_gaus,rrv_width_ErfExp);
@@ -568,9 +569,9 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
         rrv_high  = RooRealVar("rrv_high"+label,"rrv_high"+label,0.5,0.,1.);
         model_pdf = RooAddPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,RooArgList(erfExp,gaus),RooArgList(rrv_high))
 
-    ## Erf*Exp+Gaus or mj spectrum
+    ## Erf*Exp+Gaus or obs0_variable spectrum
     if in_model_name == "ErfExpGaus_v0":
-        print "########### Erf*Exp + Gaus for mj  fit  ############"
+        print "########### Erf*Exp + Gaus for obs0_variable  fit  ############"
         rrv_c_ErfExp      = RooRealVar("rrv_c_ErfExp"+label,"rrv_c_ErfExp"+label,-0.05,-0.2,0.);
         rrv_offset_ErfExp = RooRealVar("rrv_offset_ErfExp"+label,"rrv_offset_ErfExp"+label,100.,10.,140.);
         rrv_width_ErfExp  = RooRealVar("rrv_width_ErfExp"+label,"rrv_width_ErfExp"+label,30.,10,100.);
@@ -583,9 +584,9 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
         rrv_high   = RooRealVar("rrv_high"+label,"rrv_high"+label,0.7,0.,1.);
         model_pdf  = RooAddPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,RooArgList(erfExp,gaus),RooArgList(rrv_high))
 
-    ## Erf*Exp+Gaus or mj spectrum
+    ## Erf*Exp+Gaus or obs0_variable spectrum
     if in_model_name == "ErfExpGaus_v1":
-        print "########### Erf*Exp + Gaus for mlvj fit  ############"
+        print "########### Erf*Exp + Gaus for limit_variable fit  ############"
         rrv_c_ErfExp       = RooRealVar("rrv_c_ErfExp"+label,"rrv_c_ErfExp"+label,-0.007,-0.1,0.);
         rrv_offset_ErfExp  = RooRealVar("rrv_offset_ErfExp"+label,"rrv_offset_ErfExp"+label,800.,10.,1400.);
         rrv_width_ErfExp   = RooRealVar("rrv_width_ErfExp"+label,"rrv_width_ErfExp"+label,24.,10,150.);
@@ -598,9 +599,9 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
         rrv_high  = RooRealVar("rrv_high"+label,"rrv_high"+label,0.1,0.,1.);
         model_pdf = RooAddPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,RooArgList(erfExp,gaus),RooArgList(rrv_high))
 
-    ## Erf*Exp+Gaus or mj spectrum
+    ## Erf*Exp+Gaus or obs0_variable spectrum
     if in_model_name == "ErfExpGaus_sp_v1":
-        print "########### Erf*Exp + Gaus for mlvj fit  ############"
+        print "########### Erf*Exp + Gaus for limit_variable fit  ############"
         rrv_c_ErfExp     = RooRealVar("rrv_c_ErfExp"+label,"rrv_c_ErfExp"+label,-0.007,-0.1,0.);
         rrv_width_ErfExp = RooRealVar("rrv_width_ErfExp"+label,"rrv_width_ErfExp"+label,24.,10,150.);
         rrv_mean_gaus    = RooRealVar("rrv_mean_gaus"+label,"rrv_mean_gaus"+label,900,860,1200);
@@ -612,9 +613,9 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
         rrv_high  = RooRealVar("rrv_high"+label,"rrv_high"+label,0.1,0.,1.);
         model_pdf = RooAddPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,RooArgList(erfExp,gaus),RooArgList(rrv_high))
 
-    ## Erf*Exp+Gaus or mj spectrum
+    ## Erf*Exp+Gaus or obs0_variable spectrum
     if in_model_name == "ErfExpGaus_v2":
-        print "########### Erf*Exp + Gaus for mj fit  ############"
+        print "########### Erf*Exp + Gaus for obs0_variable fit  ############"
         rrv_c_ErfExp      = RooRealVar("rrv_c_ErfExp"+label,"rrv_c_ErfExp"+label,-0.05,-10.,0.);
         rrv_offset_ErfExp = RooRealVar("rrv_offset_ErfExp"+label,"rrv_offset_ErfExp"+label,100.,10.,140.);
         rrv_width_ErfExp  = RooRealVar("rrv_width_ErfExp"+label,"rrv_width_ErfExp"+label,30.,10,100.);
@@ -625,7 +626,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
 
     ## Erf*Exp + 2Gaus  
     if in_model_name == "ErfExp2Gaus":
-        print "########### Erf*Exp + 2Gaus for mj fit  ############"
+        print "########### Erf*Exp + 2Gaus for obs0_variable fit  ############"
         rrv_c_ErfExp      = RooRealVar("rrv_c_ErfExp"+label,"rrv_c_ErfExp"+label,-0.05,-0.2,0.);
         rrv_offset_ErfExp = RooRealVar("rrv_offset_ErfExp"+label,"rrv_offset_ErfExp"+label,100.,10.,140.);
         rrv_width_ErfExp  = RooRealVar("rrv_width_ErfExp"+label,"rrv_width_ErfExp"+label,30.,10,100.);
@@ -642,9 +643,9 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
         rrv_high2 = RooRealVar("rrv_high2"+label,"rrv_high2"+label,0.4,0.,1.);
         model_pdf =RooAddPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,RooArgList(erfExp,gaus1,gaus2),RooArgList(rrv_high1,rrv_high2))
 
-    ## Gaus + Gaus for mj spectrum
+    ## Gaus + Gaus for obs0_variable spectrum
     if in_model_name == "2Gaus":
-        print "########### 2Gaus for mj fit  ############"
+        print "########### 2Gaus for obs0_variable fit  ############"
         mean1_tmp      = 8.3141e+01; mean1_tmp_err      = 1.63e-01;
         deltamean_tmp  = 6.9129e+00; deltamean_tmp_err  = 1.24e+00;
         sigma1_tmp     = 7.5145e+00; sigma1_tmp_err     = 1.99e-01;
@@ -664,10 +665,10 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
         rrv_frac  = RooRealVar("rrv_frac"+label,"rrv_frac"+label,frac_tmp, frac_tmp-frac_tmp_err*4, frac_tmp+frac_tmp_err*4);
         model_pdf = RooAddPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,RooArgList(gaus1,gaus2),RooArgList(rrv_frac),1)
 
-    ## 2Gaus+2Gaus for VV mj spectrum -> WZ and WW
+    ## 2Gaus+2Gaus for VV obs0_variable spectrum -> WZ and WW
     if in_model_name == "2_2Gaus":
 
-        print "########### 2Gaus +2Gaus for mj fit  ############"
+        print "########### 2Gaus +2Gaus for obs0_variable fit  ############"
         mean1_tmp      = 8.3141e+01; mean1_tmp_err      = 1.63e-01;
         deltamean_tmp  = 6.9129e+00; deltamean_tmp_err  = 1.24e+00;
         sigma1_tmp     = 7.5145e+00; sigma1_tmp_err     = 1.99e-01;
@@ -698,10 +699,10 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
         rrv_frac  = RooRealVar("rrv_frac"+label,"rrv_frac"+label,0.74)#,0.5,1.0)
         model_pdf = RooAddPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,RooArgList(gausguas_1,gausguas_2),RooArgList(rrv_frac),1)
 
-    ## Erf*Exp + 2Gaus for mj spectrum
+    ## Erf*Exp + 2Gaus for obs0_variable spectrum
     if in_model_name == "2Gaus_ErfExp":
 
-        print "########### 2Gaus + Erf*Exp for mj fit  ############"
+        print "########### 2Gaus + Erf*Exp for obs0_variable fit  ############"
         mean1_tmp      = 8.3141e+01; mean1_tmp_err      = 1.63e-01;
         deltamean_tmp  = 6.9129e+00; deltamean_tmp_err  = 1.24e+00;
         sigma1_tmp     = 7.5145e+00; sigma1_tmp_err     = 1.99e-01;
@@ -733,9 +734,9 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
         model_pdf =RooAddPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,RooArgList(erfexp, gaus1,gaus2),RooArgList(rrv_frac, rrv_frac_2gaus),1)
 
 
-    ## Erf*Exp+Voig+Gaus for mj spectrum 
+    ## Erf*Exp+Voig+Gaus for obs0_variable spectrum 
     if in_model_name == "ErfExpVoigGaus":
-        print "########### Erf*Exp + Voig + Gaus for mj fit  ############"
+        print "########### Erf*Exp + Voig + Gaus for obs0_variable fit  ############"
         rrv_c_ErfExp      = RooRealVar("rrv_c_ErfExp"+label,"rrv_c_ErfExp"+label,-0.1,-10.,0.);
         rrv_offset_ErfExp = RooRealVar("rrv_offset_ErfExp"+label,"rrv_offset_ErfExp"+label,100.,10.,140.);
         rrv_width_ErfExp  = RooRealVar("rrv_width_ErfExp"+label,"rrv_width_ErfExp"+label,30.,10,100.);
@@ -750,86 +751,86 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
 
     ## User1 function 
     if in_model_name == "User1":
-        print "########### User 1 Pdf  for mlvj fit ############"
+        print "########### User 1 Pdf  for limit_variable fit ############"
         rrv_p0 = RooRealVar("rrv_p0_User1"+label,"rrv_p0_User1"+label, 30, 10, 90);
         rrv_p1 = RooRealVar("rrv_p1_User1"+label,"rrv_p1_User1"+label, -4, -9, -2);
         model_pdf=RooUser1Pdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,rrv_x,rrv_p0,rrv_p1);
 
     ## QCD pdf  
     if in_model_name == "QCD":
-        print "########### QCD Pdf  for mlvj fit ############"
+        print "########### QCD Pdf  for limit_variable fit ############"
         rrv_p0 = RooRealVar("rrv_p0_QCD"+label,"rrv_p0_QCD"+label, 0,-200,200);
         rrv_p1 = RooRealVar("rrv_p1_QCD"+label,"rrv_p1_QCD"+label, 0,-200,200);
         rrv_p2 = RooRealVar("rrv_p2_QCD"+label,"rrv_p2_QCD"+label, 0,-200,200);
         model_pdf = RooQCDPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,rrv_x,rrv_p0,rrv_p1,rrv_p2);
 
     if in_model_name == "QCD_v2":#can replace exp
-        print "########### QCD Pdf  for mlvj fit ############"
+        print "########### QCD Pdf  for limit_variable fit ############"
         rrv_p0 = RooRealVar("rrv_p0_QCD"+label,"rrv_p0_QCD"+label, -15,-50,0);
         rrv_p1 = RooRealVar("rrv_p1_QCD"+label,"rrv_p1_QCD"+label, 20,0,250);
         rrv_p2 = RooRealVar("rrv_p2_QCD"+label,"rrv_p2_QCD"+label,0,-20,20);
         model_pdf = RooQCDPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,rrv_x,rrv_p0,rrv_p1,rrv_p2);
 
-    ## For mlvj fit -> Pow function can replace exp
+    ## For limit_variable fit -> Pow function can replace exp
     if in_model_name == "Pow" or in_model_name == "Pow_sr" :
-        print "########### Pow Pdf  for mlvj fit ############"
+        print "########### Pow Pdf  for limit_variable fit ############"
         rrv_c = RooRealVar("rrv_c_Pow"+label,"rrv_c_Pow"+label, -5, -20, 0);
         model_pdf = RooPowPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,rrv_x, rrv_c );
 
-    ## For mlvj fit -> Pow function can replace exp
+    ## For limit_variable fit -> Pow function can replace exp
     if in_model_name == "Pow2":
-        print "########### Pow2 Pdf  for mlvj fit ############"
+        print "########### Pow2 Pdf  for limit_variable fit ############"
         rrv_c0 = RooRealVar("rrv_c0_Pow2"+label,"rrv_c0_Pow2"+label, 5, 0, 20);
         rrv_c1 = RooRealVar("rrv_c1_Pow2"+label,"rrv_c1_Pow2"+label, 0, -5 , 5);
         model_pdf = RooPow2Pdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum, rrv_x, rrv_c0, rrv_c1 );
 
-    ## For mlvj fit ->Erf*Pow can replace Erf*Exp
+    ## For limit_variable fit ->Erf*Pow can replace Erf*Exp
     if in_model_name == "ErfPow_v1":
-        print "########### Erf*Pow Pdf  for mlvj fit ############"
+        print "########### Erf*Pow Pdf  for limit_variable fit ############"
         rrv_c      = RooRealVar("rrv_c_ErfPow"+label,"rrv_c_ErfPow"+label, -5,-10,0);
         rrv_offset = RooRealVar("rrv_offset_ErfPow"+label,"rrv_offset_ErfPow"+label, 450,350,550);
         rrv_width  = RooRealVar("rrv_width_ErfPow"+label,"rrv_width_ErfPow"+label,50,20,90);
         model_pdf  = RooErfPowPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,rrv_x,rrv_c,rrv_offset,rrv_width);
 
-    ## For mlvj fit ->Erf*Pow can replace Erf*Exp -> in the sideband
+    ## For limit_variable fit ->Erf*Pow can replace Erf*Exp -> in the sideband
     if in_model_name == "ErfPow2_v1":
-        print "########### Erf*Pow2 Pdf  for mlvj fit ############"
+        print "########### Erf*Pow2 Pdf  for limit_variable fit ############"
         rrv_c0 = RooRealVar("rrv_c0_ErfPow2"+label,"rrv_c0_ErfPow2"+label,14,1,30);
         rrv_c1 = RooRealVar("rrv_c1_ErfPow2"+label,"rrv_c1_ErfPow2"+label, 5,-5,10);
         rrv_offset = RooRealVar("rrv_offset_ErfPow2"+label,"rrv_offset_ErfPow2"+label, 450,400,520);
         rrv_width  = RooRealVar("rrv_width_ErfPow2"+label,"rrv_width_ErfPow2"+label,30,10,80);
         model_pdf  = RooErfPow2Pdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,rrv_x,rrv_c0,rrv_c1,rrv_offset,rrv_width);
 
-    ## For mlvj fit ->Erf*Pow can replace Erf*Exp for sr
+    ## For limit_variable fit ->Erf*Pow can replace Erf*Exp for sr
     if in_model_name == "ErfPow2_v1_sr":
-        print "########### Erf*Pow2 Pdf  for mlvj fit in the SR  ############"
+        print "########### Erf*Pow2 Pdf  for limit_variable fit in the SR  ############"
         rrv_c0 = RooRealVar("rrv_c0_ErfPow2"+label,"rrv_c0_ErfPow2"+label, 4,2, 8);
         rrv_c1 = RooRealVar("rrv_c1_ErfPow2"+label,"rrv_c1_ErfPow2"+label, -0.5,-2,0);
         rrv_offset = RooRealVar("rrv_offset_ErfPow2"+label,"rrv_offset_ErfPow2"+label, 490,440,520);
         rrv_width  = RooRealVar("rrv_width_ErfPow2"+label,"rrv_width_ErfPow2"+label,50,30,80);
         model_pdf = RooErfPow2Pdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,rrv_x,rrv_c0,rrv_c1,rrv_offset,rrv_width);
 
-    ## For mlvj fit ->Erf*Pow*Exp can replace Erf*Exp 
+    ## For limit_variable fit ->Erf*Pow*Exp can replace Erf*Exp 
     if in_model_name == "ErfPowExp_v1":
-        print "########### Erf*Pow*Exp Pdf  for mlvj fit   ############"
+        print "########### Erf*Pow*Exp Pdf  for limit_variable fit   ############"
         rrv_c0 = RooRealVar("rrv_c0_ErfPowExp"+label,"rrv_c0_ErfPowExp"+label,11,5,20);
         rrv_c1 = RooRealVar("rrv_c1_ErfPowExp"+label,"rrv_c1_ErfPowExp"+label, 0,-2,2);
         rrv_offset = RooRealVar("rrv_offset_ErfPowExp"+label,"rrv_offset_ErfPowExp"+label, 470,420,520);
         rrv_width  = RooRealVar("rrv_width_ErfPowExp"+label,"rrv_width_ErfPowExp"+label,40,30,50);
         model_pdf  = RooErfPowExpPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,rrv_x,rrv_c0,rrv_c1,rrv_offset,rrv_width);
 
-    ## For mlvj fit ->Erf*Pow*Exp can replace Erf*Exp 
+    ## For limit_variable fit ->Erf*Pow*Exp can replace Erf*Exp 
     if in_model_name == "ErfPowExp_v1_sr":
-        print "########### Erf*Pow*Exp Pdf for mlvj fit in SR  ############"
+        print "########### Erf*Pow*Exp Pdf for limit_variable fit in SR  ############"
         rrv_c0 = RooRealVar("rrv_c0_ErfPowExp"+label,"rrv_c0_ErfPowExp"+label,6,2,15);
         rrv_c1 = RooRealVar("rrv_c1_ErfPowExp"+label,"rrv_c1_ErfPowExp"+label, -1,-3,2);
         rrv_offset = RooRealVar("rrv_offset_ErfPowExp"+label,"rrv_offset_ErfPowExp"+label, 490,440,520);
         rrv_width  = RooRealVar("rrv_width_ErfPowExp"+label,"rrv_width_ErfPowExp"+label,50,30,70);
         model_pdf=RooErfPowExpPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum,rrv_x,rrv_c0,rrv_c1,rrv_offset,rrv_width);
 
-    ## For mlvj fit ->Erf*Pow*Exp can replace Erf*Exp 
+    ## For limit_variable fit ->Erf*Pow*Exp can replace Erf*Exp 
     if in_model_name == "ErfPowExp_v1_0":#difference inital value
-        print "########### Erf*Pow*Exp Pdf for mlvj fit in SR  ############"
+        print "########### Erf*Pow*Exp Pdf for limit_variable fit in SR  ############"
         rrv_c0 = RooRealVar("rrv_c0_ErfPowExp"+label,"rrv_c0_ErfPowExp"+label,20,15,40);
         rrv_c1 = RooRealVar("rrv_c1_ErfPowExp"+label,"rrv_c1_ErfPowExp"+label, 1.6,0.5,5);
         rrv_offset = RooRealVar("rrv_offset_ErfPowExp"+label,"rrv_offset_ErfPowExp"+label, 470,420,520);
@@ -839,7 +840,7 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
     ## Keys 
     if in_model_name == "Keys":
         print "########### Keys PDF  ############"
-        rdataset = workspace.data("rdataset4fit"+label+"_mlvj");
+        rdataset = workspace.data("rdataset4fit"+label+"_limit_variable");
         rdataset.Print();
         model_pdf = RooKeysPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum, rrv_x, rdataset);
 
@@ -847,9 +848,9 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
     ## Hist 
     if in_model_name == "Hist":
         print "########### Hist PDF  ############"
-        rdataset = workspace.data("rdataset4fit"+label+"_mlvj");
+        rdataset = workspace.data("rdataset4fit"+label+"_limit_variable");
         rdataset.Print();
-        rdatahist= rdataset.binnedClone("rdatahist4fit"+label+"_mlvj","rdatahist4fit"+label+"_mlvj");
+        rdatahist= rdataset.binnedClone("rdatahist4fit"+label+"_limit_variable","rdatahist4fit"+label+"_limit_variable");
         model_pdf = RooHistPdf("model_pdf"+label+mass_spectrum,"model_pdf"+label+mass_spectrum, RooArgSet(rrv_x), rdatahist);
 
 
@@ -857,3 +858,131 @@ def make_Pdf( label, workspace, fit_config, mass_spectrum):
     getattr(workspace,"import")(model_pdf)
     return workspace.pdf("model_pdf"+label+mass_spectrum)
 
+### in order to make the plot_legend
+def legend4Plot(plot, title, left=1, isFill=1, x_offset_low=0., y_offset_low=0., x_offset_high =0., y_offset_high =0., TwoCoulum =1.):
+    print "############### draw the plot_legend ########################"
+    if left==-1:
+        theLeg = TLegend(0.65+x_offset_low, 0.58+y_offset_low, 0.93+x_offset_low, 0.87+y_offset_low, "", "NDC");
+        theLeg.SetName("theLegend");
+        theLeg.SetLineColor(0);
+        theLeg.SetTextFont(42);
+        theLeg.SetTextSize(.04);
+    else:
+        theLeg = TLegend(0.41+x_offset_low, 0.61+y_offset_low, 0.76+x_offset_high, 0.93+y_offset_high, "", "NDC");            
+        theLeg.SetName("theLegend");
+        if TwoCoulum :
+            theLeg.SetNColumns(2);
+
+    theLeg.SetFillColor(0);
+    theLeg.SetFillStyle(0);
+    theLeg.SetBorderSize(0);
+    theLeg.SetLineColor(0);
+    theLeg.SetLineWidth(0);
+    theLeg.SetLineStyle(0);
+    theLeg.SetTextSize(0.040);
+    theLeg.SetTextFont(42);
+
+    
+    nLeg_total=0;
+    nLeg_data=0; nLeg_uncertainty=0;
+    leg_list=[];
+    objName_before = "";
+    for obj in range(int(plot.numItems()) ):
+        objName = plot.nameOf(obj);
+        if objName == "errorband" : objName = "Uncertainty";
+        print objName;
+        if not (  plot.getInvisible(objName) or TString(objName).Contains("invisi") or TString(objName).Contains("line") or objName ==objName_before ):
+            leg_obj = plot.getObject(obj); 
+            leg_name= objName;
+            leg_opt = plot.getDrawOptions(objName).Data()
+
+            if leg_opt=="P": leg_opt="PE"
+
+            if   TString(leg_name).Contains("Uncertainty"):
+                leg_opt="F"; 
+                nLeg_uncertainty=nLeg_total;
+            elif TString(leg_name).Contains("sigma"): 
+                leg_opt="F"; 
+            elif TString(leg_name).Data()=="data" : 
+                leg_name="CMS Data "+title; 
+                nLeg_data=nLeg_total;
+            elif TString(leg_name).Data()=="WJets" :
+                leg_name="W+jets"; 
+            elif TString(leg_name).Data()=="SingleT" : 
+                leg_name="Single t"; 
+            elif TString(leg_name).Data()=="TTbar" :
+                leg_name="t#bar{t}"; 
+            elif TString(leg_name).Data()=="VV" : 
+                leg_name="WW/WZ"; 
+            leg_list.append( [leg_obj, leg_name, leg_opt]  );
+            nLeg_total+=1;
+            objName_before=objName;
+
+    #need to draw data and uncertainty at first;
+    theLeg.AddEntry(leg_list[nLeg_data][0],leg_list[nLeg_data][1],leg_list[nLeg_data][2]);
+    theLeg.AddEntry(leg_list[nLeg_uncertainty][0],leg_list[nLeg_uncertainty][1],leg_list[nLeg_uncertainty][2]);
+    for iter in range(nLeg_total):
+        if not (iter==nLeg_data or iter==nLeg_uncertainty):
+            theLeg.AddEntry(leg_list[iter][0],leg_list[iter][1],leg_list[iter][2]);
+
+    return theLeg;
+
+
+### fix a given model taking the label, and the region --> for extended pdf --> all the parameter of the pdf + normalization
+def fix_Model(self, label, limit_variable_region="_signalregion",mass_spectrum="_limit_variable"):
+    print "########### Fixing an Extended Pdf for limit_variable  ############"        
+    rdataset = self.workspace4fit_.data("rdataset%s%s_%s%s"%(label,limit_variable_region,self.categoryLabel,mass_spectrum))
+    model = self.get_limit_variable_Model(label,limit_variable_region);
+    rdataset.Print();
+    model.Print();
+    parameters = model.getParameters(rdataset);
+    par=parameters.createIterator(); par.Reset();
+    param=par.Next()
+    while (param):
+        param.setConstant(kTRUE);
+        param=par.Next()
+
+### fix a pdf in a different way --> for RooAbsPdf 
+def fix_Pdf(self,model_pdf,argset_notparameter):
+    print "########### Fixing a RooAbsPdf for limit_variable or obs0_variable  ############"        
+    parameters = model_pdf.getParameters(argset_notparameter);
+    par=parameters.createIterator(); par.Reset();
+    param=par.Next()
+    while (param):
+        param.setConstant(kTRUE);
+        param.Print();
+        param=par.Next()
+
+### print the parameters of a given pdf --> only non constant ones
+def ShowParam_Pdf(self,model_pdf,argset_notparameter):
+    print "########### Show Parameters of a input model  ############"        
+    model_pdf.Print()
+    parameters = model_pdf.getParameters(argset_notparameter);
+    par = parameters.createIterator(); par.Reset();
+    param = par.Next()
+    while (param):
+        if not param.isConstant():
+            param.Print();
+            if (param.getVal()-param.getMin())< param.getError()*1 or (param.getMax()- param.getVal())< param.getError()*1:
+                param.Print();
+        param=par.Next()
+
+
+    ### change a dataset to a histpdf roofit object
+def change_dataset_to_histpdf(self,x,dataset):
+    print "######## change the dataset into a histpdf  ########"        
+    datahist = dataset.binnedClone(dataset.GetName()+"_binnedClone",dataset.GetName()+"_binnedClone")
+    histpdf = RooHistPdf(dataset.GetName()+"_histpdf",dataset.GetName()+"_histpdf",RooArgSet(x),datahist)
+    dataset.Print();
+    histpdf.Print();
+    getattr(self.workspace4fit_,"import")(histpdf)
+
+### change from a dataset to a histogramm of Roofit
+def change_dataset_to_histogram(self, x,dataset,label=""):
+    print "######## change the dataset into a histogramm for obs0_variable distribution ########"        
+    datahist=dataset.binnedClone(dataset.GetName()+"_binnedClone",dataset.GetName()+"_binnedClone")
+    nbin=int( (x.getMax()-x.getMin())/self.obs0_variable_BinWidth);
+    if label=="":
+        return datahist.createHistogram("histo_%s"%(dataset.GetName()),x, RooFit.Binning( nbin ,x.getMin(),x.getMax()));
+    else:
+        return datahist.createHistogram("histo_"+label,x, RooFit.Binning( nbin,x.getMin(),x.getMax()));
