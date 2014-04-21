@@ -10,7 +10,7 @@ import subprocess
 from subprocess import Popen
 from optparse import OptionParser
 
-from PKUAnalyzerClass import doFit_wj_and_wlvj
+from PKUAnalyzerClass import doFit
 
 
 ############################################
@@ -45,9 +45,9 @@ parser.add_option('--category', action="store",type="string",dest="category",def
 
 
 ### run analysis without systematics
-def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample, in_mlvj_signalregion_min=500, in_mlvj_signalregion_max=700, in_mj_min=30, in_mj_max=140, in_mlvj_min=400, in_mlvj_max=1400, fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1"):
+def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample, in_limit_variable_signalregion_min, in_limit_variable_signalregion_max, in_obs0_variable_min, in_obs0_variable_max, in_limit_variable_min, in_limit_variable_max, fit_model, fit_model_alter):
 
-    print "#################### pre_limit_sb_correction_without_systermatic: categoryID %s, signal %s, max and min signal region %f-%f, max and min mJ %f-%f, max and min mlvj %f-%f, fit model %s and alternate %s ######################"%(categoryID,prime_signal_sample,in_mlvj_signalregion_min,in_mlvj_signalregion_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter);
+    print "#################### pre_limit_sb_correction_without_systermatic: categoryID %s, signal %s, max and min signal region %f-%f, max and min mJ %f-%f, max and min limit_variable %f-%f, fit model %s and alternate %s ######################"%(categoryID,prime_signal_sample,in_limit_variable_signalregion_min,in_limit_variable_signalregion_max,in_obs0_variable_min,in_obs0_variable_max,in_limit_variable_min,in_limit_variable_max,fit_model,fit_model_alter);
 
 
     # data, MC of signal and backgrounds
@@ -61,29 +61,27 @@ def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample
     #Signal and Background Line: Name, color number, file, fit_config
     #fit_config = ( decorrelation_or_not, fit shape name, parameter0 initial value, parameter1 initial value, parameter2 initial value, ..).;
     # when shape name= "Keys", it means not fit 
-    '''sig_bkg_files=(
-            2, # nsig: number of signal channels
-            4, # nbkg: number of background channels
-            ("data", 1, file_Directory+"treeEDBR_data_xwh.root"),#data file
-            ("MWp900", 1, file_Directory+"treeEDBR_MWp_900_xwh.root"),#sig
-            ("MWp1000", 1, file_Directory+"treeEDBR_MWp_1000_xwh.root"),#sig
-            ("WJets", 2, file_Directory+"treeEDBR_WJetsPt100_xwh.root"), #bkg
-            ("TTbar", 210, file_Directory+"treeEDBR_TTBARpowheg_xwh.root"), #bkg
-            ("SingleT", 7, file_Directory+"treeEDBR_SingleTop_xwh.root"), #bkg
-            ("VV", 4, file_Directory+"treeEDBR_VV_xwh.root") #bkg
-            ); '''
     sig_bkg_files=(
             2, # nsig: number of signal channels
             4, # nbkg: number of background channels
             ("data"   , 1  , file_Directory+"treeEDBR_data_xww.root"                         , ( 0, "Hist") ), #data file
             ("G900"   , 1  , file_Directory+"treeEDBR_BulkG_WW_inclusive_c0p2_M900_xww.root" , ( 0, "Hist") ), #sig
             ("G1000"  , 1  , file_Directory+"treeEDBR_BulkG_WW_inclusive_c0p2_M1000_xww.root", ( 0, "Hist") ), #sig
-            ("WJets"  , 2  , file_Directory+"treeEDBR_WJetsPt100_xww.root"                   , ( 0, "Hist") ), #bkg
+            ("WJets"  , 2  , file_Directory+"treeEDBR_WJetsPt100_xww.root"                   , ( 0, "Exp") ), #bkg
             ("TTbar"  , 210, file_Directory+"treeEDBR_TTBARpowheg_xww.root"                  , ( 0, "Hist") ), #bkg
             ("SingleT", 7  , file_Directory+"treeEDBR_SingleTop_xww.root"                    , ( 0, "Hist") ), #bkg
-            ("VV"     , 4  , file_Directory+"treeEDBR_VV_xww.root"                           , ( 0, "Hist") )  #bkg
+            ("VV"     , 4  , file_Directory+"treeEDBR_VV_xww.root"                           , ( 0, "Exp") )  #bkg
             );
-    #category: mu/el, HighPurity/LowPurity;   
+
+    #sig_bkg_files=(
+    #        1, # nsig: number of signal channels
+    #        2, # nbkg: number of background channels
+    #        ("data"   , 1  , file_Directory+"treeEDBR_data_xww.root"                         , ( 0, "Hist") ), #data file
+    #        ("G900"   , 1  , file_Directory+"treeEDBR_BulkG_WW_inclusive_c0p2_M900_xww.root" , ( 0, "Hist") ), #sig
+    #        ("WJets"  , 2  , file_Directory+"treeEDBR_WJetsPt100_xww.root"                   , ( 0, "Exp") ), #bkg
+    #        ("TTbar"  , 210, file_Directory+"treeEDBR_TTBARpowheg_xww.root"                  , ( 0, "Hist") ), #bkg
+    #        );
+
     category_ID_label={
             0: ("elLP", "W#rightarrow e#nu, 1JLP"),
             1: ("elHP", "W#rightarrow e#nu, 1JHP"),
@@ -96,56 +94,57 @@ def pre_limit_sb_correction_without_systermatic( categoryID, prime_signal_sample
             "sig_bkg_files": sig_bkg_files,
             "categoryID": categoryID,# mu/el, HP/LP 
             "categoryLabel": category_ID_label[categoryID],# mu/el, HP/LP 
-            "limit_variable": "mZZ",
-            "limit_variable_full_range_min": in_mlvj_min,
-            "limit_variable_full_range_max": in_mlvj_max,
+            "limit_variable": ("mZZ","M_{WW}"),
+            "limit_variable_full_range_min": in_limit_variable_min,
+            "limit_variable_full_range_max": in_limit_variable_max,
             "limit_variable_BinWidth": 150.,
-            "limit_variable_signalregion_range_min": in_mlvj_signalregion_min,
-            "limit_variable_signalregion_range_max": in_mlvj_signalregion_max,
+            "limit_variable_signalregion_range_min": in_limit_variable_signalregion_min,
+            "limit_variable_signalregion_range_max": in_limit_variable_signalregion_max,
             "limit_variable_fit_model": fit_model,
             "limit_variable_fit_model": fit_model_alter,
-            "obs0_variable": "mJJNoKinFit",
-            "obs0_variable_full_range_min": in_mj_min,
-            "obs0_variable_full_range_max": in_mj_max,
+            "obs0_variable": ("mJJNoKinFit","Jet Mass"),
+            "obs0_variable_full_range_min": in_obs0_variable_min,
+            "obs0_variable_full_range_max": in_obs0_variable_max,
             "obs0_variable_BinWidth": 5.,
             "obs0_variable_signalregion_range_min": 65,
             "obs0_variable_signalregion_range_max": 105,
-            "obs0_variable_lowersideband_range_min": 30,
+            "obs0_variable_lowersideband_range_min": in_obs0_variable_min,
             "obs0_variable_lowersideband_range_max": 65,
             "obs0_variable_uppersideband_range_min": 105,
-            "obs0_variable_uppersideband_range_max": 130,
+            "obs0_variable_uppersideband_range_max": in_obs0_variable_max,
             "fit_model": "ErfExp_v1", 
             "fit_model_alter": "ErfPow_v1",
             "additioninformation": options.additioninformation,
             "signal_scale":25 
             };
-    boostedW_fitter=doFit_wj_and_wlvj( analyzer_config);
-    boostedW_fitter.analysis();
+    boostedW_fitter=doFit( analyzer_config);
+    #boostedW_fitter.analysis("");
+    boostedW_fitter.analysis("DataDriven4WJetsNorm_fit_jetmass");
     #boostedW_fitter.read_workspace(1);
 
 '''
 ### run full analysis
-def pre_limit_sb_correction(method, categoryID, prime_signal_sample="BulkG_c0p2_M1000", in_mlvj_signalregion_min=500, in_mlvj_signalregion_max=700,
-        in_mj_min=30, in_mj_max=140, in_mlvj_min=400, in_mlvj_max=1400, fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1"): 
+def pre_limit_sb_correction(method, categoryID, prime_signal_sample="BulkG_c0p2_M1000", in_limit_variable_signalregion_min=500, in_limit_variable_signalregion_max=700,
+        in_obs0_variable_min=30, in_obs0_variable_max=140, in_limit_variable_min=400, in_limit_variable_max=1400, fit_model="ErfExp_v1", fit_model_alter="ErfPow_v1"): 
 
-    print "#################### pre_limit_sb_correction: categoryID %s, signal %s, max and min signal region %f-%f, max and min mJ %f-%f, max and min mlvj %f-%f, fit model %s and alternate %s ######################"%(categoryID,prime_signal_sample,in_mlvj_signalregion_min,in_mlvj_signalregion_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter);
+    print "#################### pre_limit_sb_correction: categoryID %s, signal %s, max and min signal region %f-%f, max and min mJ %f-%f, max and min limit_variable %f-%f, fit model %s and alternate %s ######################"%(categoryID,prime_signal_sample,in_limit_variable_signalregion_min,in_limit_variable_signalregion_max,in_obs0_variable_min,in_obs0_variable_max,in_limit_variable_min,in_limit_variable_max,fit_model,fit_model_alter);
 
-    boostedW_fitter=doFit_wj_and_wlvj(categoryID, prime_signal_sample, in_mlvj_signalregion_min,in_mlvj_signalregion_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model,fit_model_alter);
+    boostedW_fitter=doFit(categoryID, prime_signal_sample, in_limit_variable_signalregion_min,in_limit_variable_signalregion_max,in_obs0_variable_min,in_obs0_variable_max,in_limit_variable_min,in_limit_variable_max,fit_model,fit_model_alter);
     getattr(boostedW_fitter,"analysis_sideband_correction_%s"%(method) )();
 
 ### funtion to run just signal lineshape fit
-def pre_fitsignal_only(categoryID, prime_signal_sample="BulkG_c0p2_M1000", in_mlvj_signalregion_min=500, in_mlvj_signalregion_max=700,
-        in_mj_min=30, in_mj_max=140, in_mlvj_min=400, in_mlvj_max=1400, fit_model_narrow="CB_v1", fit_model_width="BWCB"): 
+def pre_fitsignal_only(categoryID, prime_signal_sample="BulkG_c0p2_M1000", in_limit_variable_signalregion_min=500, in_limit_variable_signalregion_max=700,
+        in_obs0_variable_min=30, in_obs0_variable_max=140, in_limit_variable_min=400, in_limit_variable_max=1400, fit_model_narrow="CB_v1", fit_model_width="BWCB"): 
 
-    print "#################### pre_fitsignal_only: categoryID %s, signal %s, max and min signal region %f-%f, max and min mJ %f-%f, max and min mlvj %f-%f, fit model narrow %s, fit model width %s  ######################"%(categoryID,prime_signal_sample,in_mlvj_signalregion_min,in_mlvj_signalregion_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max,fit_model_narrow, fit_model_width);
+    print "#################### pre_fitsignal_only: categoryID %s, signal %s, max and min signal region %f-%f, max and min mJ %f-%f, max and min limit_variable %f-%f, fit model narrow %s, fit model width %s  ######################"%(categoryID,prime_signal_sample,in_limit_variable_signalregion_min,in_limit_variable_signalregion_max,in_obs0_variable_min,in_obs0_variable_max,in_limit_variable_min,in_limit_variable_max,fit_model_narrow, fit_model_width);
 
-    boostedW_fitter=doFit_wj_and_wlvj(categoryID, prime_signal_sample, in_mlvj_signalregion_min,in_mlvj_signalregion_max,in_mj_min,in_mj_max,in_mlvj_min,in_mlvj_max);
+    boostedW_fitter=doFit(categoryID, prime_signal_sample, in_limit_variable_signalregion_min,in_limit_variable_signalregion_max,in_obs0_variable_min,in_obs0_variable_max,in_limit_variable_min,in_limit_variable_max);
     boostedW_fitter.fit_Signal(fit_model_narrow,fit_model_width);
 
 
 ### function to check the workspace once it has already created
 def check_workspace(categoryID, higgs):
-    boostedW_fitter = doFit_wj_and_wlvj(categoryID,higgs);
+    boostedW_fitter = doFit(categoryID,higgs);
     boostedW_fitter.read_workspace()
 '''
 #### Main Code
