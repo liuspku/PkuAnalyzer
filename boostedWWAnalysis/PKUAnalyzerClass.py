@@ -1105,8 +1105,10 @@ class doFit:
         datacard_out.write( "\nkmax *" )
         datacard_out.write( "\n--------------- ")
 
-        #if datacard_mode == "unbin":
-        #    fnOnly = ntpath.basename(self.file_rlt_root) ## workspace for limit --> output file for the workspace
+        if datacard_mode == "unbin":
+            fnOnly = ntpath.basename(self.file_rlt_root) ## workspace for limit --> output file for the workspace
+            datacard_out.write( "\nshapes * * %s %s:$PROCESS_%s"%(fnOnly, self.workspace4limit_.GetName(), self.categoryLabel))
+
         #    if TString(self.allsignals).Contains("BulkG_WW"):
         #        datacard_out.write("\nshapes BulkWW  CMS_%s1J%s  %s %s:$PROCESS_%s_%s"%(self.categoryLabel,self.wtagger_label,fnOnly,self.workspace4limit_.GetName(), self.categoryLabel, self.wtagger_label));
         #    else:
@@ -1120,28 +1122,35 @@ class doFit:
         #    datacard_out.write( "\n--------------- ")
 
         datacard_out.write( "\nbin CMS_%s "%(self.categoryLabel));    
-        #if datacard_mode == "unbin":
-        #    datacard_out.write( "\nobservation %0.2f "%(self.workspace4limit_.data("data_obs_%s_%s"%(self.categoryLabel,self.wtagger_label)).sumEntries()) )
+        if datacard_mode == "unbin":
+            datacard_out.write( "\nobservation %0.2f "%(self.workspace4limit_.data("data_obs_%s"%(self.categoryLabel)).sumEntries()) )
         if datacard_mode == "counting":
             datacard_out.write( "\nobservation %0.2f "%(self.workspace4limit_.var("observation_for_counting").getVal()) )
+
 
         datacard_out.write( "\n------------------------------" );
 
         tmp_bin_string="";
         tmp_processname_string="";
         tmp_processnum_string="";
-        tmp_rate_counting="";
+        tmp_rate="";
         for iter in range( self.nsig ):
             tmp_bin_string        +="CMS_%s "%(self.categoryLabel); 
             tmp_processname_string+="%s "%(self.sig_list[iter][0])
             tmp_processnum_string +="%s "%(1-self.nsig+iter)
-            tmp_rate_counting     +="%0.5f "%( self.workspace4limit_.var("rate_%s_for_counting"%(self.sig_list[iter][0])).getVal() );
+            if datacard_mode == "unbin":
+                tmp_rate     +="%0.5f "%( self.workspace4limit_.var("rate_%s_for_unbin"%(self.sig_list[iter][0])).getVal() );
+            if datacard_mode == "counting":
+                tmp_rate     +="%0.5f "%( self.workspace4limit_.var("rate_%s_for_counting"%(self.sig_list[iter][0])).getVal() );
 
         for iter in range( self.nbkg ):
             tmp_bin_string        +="CMS_%s "%(self.categoryLabel); 
             tmp_processname_string+="%s "%(self.bkg_list[iter][0])
             tmp_processnum_string +="%s "%(1+iter)
-            tmp_rate_counting     +="%0.5f "%( self.workspace4limit_.var("rate_%s_for_counting"%(self.bkg_list[iter][0])).getVal() );
+            if datacard_mode == "unbin":
+                tmp_rate     +="%0.5f "%( self.workspace4limit_.var("rate_%s_for_unbin"%(self.bkg_list[iter][0])).getVal() );
+            if datacard_mode == "counting":
+                tmp_rate     +="%0.5f "%( self.workspace4limit_.var("rate_%s_for_counting"%(self.bkg_list[iter][0])).getVal() );
 
 
 
@@ -1149,6 +1158,7 @@ class doFit:
         datacard_out.write( "\nbin "+tmp_bin_string );
         datacard_out.write( "\nprocess "+tmp_processname_string ); ## just one signal sample
         datacard_out.write( "\nprocess "+tmp_processnum_string );
+        datacard_out.write( "\nrate "+tmp_rate );
 
         #### rates for the different process
         #if datacard_mode == "unbin":
@@ -1157,8 +1167,6 @@ class doFit:
         #    else:
         #        datacard_out.write( "\nrate %0.5f %0.3f %0.3f %0.3f %0.3f "%(self.workspace4limit_.var("rate_%s_for_unbin"%(self.allsignals)).getVal()*self.xs_rescale, self.workspace4limit_.var("rate_WJets_for_unbin").getVal(), self.workspace4limit_.var("rate_TTbar_for_unbin").getVal(), self.workspace4limit_.var("rate_SingleT_for_unbin").getVal(), self.workspace4limit_.var("rate_VV_for_unbin").getVal() ) )
 
-        if datacard_mode == "counting":
-            datacard_out.write( "\nrate "+tmp_rate_counting );
 
         datacard_out.write( "\n-------------------------------- " )
 
@@ -1404,6 +1412,31 @@ class doFit:
         self.fit_WJetsNormalization_in_Mj_signalregion();
          
          
+    def SimpleScale(self):
+        if self.categoryID <4:
+            #el
+            SF_WJets=1.75538; SF_WJets_err=0.1502;
+            SF_TTbar=1.667;   SF_TTbar_err= 0.222;
+        else:
+            #mu
+            SF_WJets=2.19802; SF_WJets_error=0.1349;
+            SF_TTbar=1.306;   SF_TTbar_err=0.165;
+
+        rrv_WJets_counting=self.workspace4fit_.var("rrv_number_fitting_signalregion_WJets_%s_limit_variable"%(self.categoryLabel));
+        rrv_WJets_counting.setVal( rrv_WJets_counting.getVal()* SF_WJets );
+
+        rrv_TTbar_counting=self.workspace4fit_.var("rrv_number_fitting_signalregion_TTbar_%s_limit_variable"%(self.categoryLabel));
+        rrv_TTbar_counting.Print();
+        rrv_TTbar_counting.setVal( rrv_TTbar_counting.getVal()* SF_TTbar  );
+        rrv_TTbar_counting.Print();
+
+        rrv_WJets_unbin=self.workspace4fit_.var("rrv_number_WJets_signalregion_%s_limit_variable"%(self.categoryLabel));
+        rrv_WJets_unbin.setVal( rrv_WJets_unbin.getVal()* SF_WJets );
+
+        rrv_TTbar_unbin=self.workspace4fit_.var("rrv_number_TTbar_signalregion_%s_limit_variable"%(self.categoryLabel));
+        rrv_TTbar_unbin.setVal( rrv_TTbar_unbin.getVal()* SF_TTbar  );
+
+
         
     #### make the obs0_variable sideband fit on data to get the Wjets normaliztion 
     #def fit_WJetsNormalization_in_Mj_signalregion(self,label,massscale=""): 
